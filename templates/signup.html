@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign up • Expense Manager</title>
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/signup.css">
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="RECAPTCHA_ENABLED" content="true">
+    <meta name="RECAPTCHA_SITE_KEY" content="6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP">
+
+    <script
+        src="https://www.google.com/recaptcha/enterprise.js?render=6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP"></script>
+
+</head>
+
+<body>
+    <header class="header">
+        <div class="brand">
+            <img src="/static/images/logo.png" alt="Logo" onerror="this.style.display='none'">
+            <div class="brand-name">Expense Manager</div>
+        </div>
+    </header>
+    <main class="centered">
+        <div class="card">
+            <h1 class="title">Create your account</h1>
+            <p class="subtitle">Use a strong password (10+ chars, include letters, numbers, symbol)</p>
+            <form id="signup-form" method="POST" action="{{ url_for('auth.signup') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div>
+                    <label for="signup-email">Email</label>
+                    <div class="email-input-container">
+                        <input id="signup-email" name="email" type="email" placeholder="you@example.com" required>
+                        <button type="button" id="send-verification" class="btn secondary" disabled>Send Code</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="verification-code">Verification Code</label>
+                    <input id="verification-code" name="verification_code" type="text" placeholder="Enter 6-digit code"
+                        disabled required>
+                </div>
+                <div>
+                    <label for="signup-password">Password</label>
+                    <div class="password-input-container">
+                        <input id="signup-password" name="password" type="password"
+                            placeholder="Strong password (min 10 characters)" required disabled>
+                        <span class="toggle-password" onclick="togglePassword('signup-password')">👁️</span>
+                    </div>
+                    <div id="password-hint" class="msg"></div>
+                </div>
+                <div>
+                    <label for="confirm-password">Confirm Password</label>
+                    <div class="password-input-container">
+                        <input id="confirm-password" name="confirm_password" type="password"
+                            placeholder="Confirm your password" required disabled>
+                        <span class="toggle-password" onclick="togglePassword('confirm-password')">👁️</span>
+                    </div>
+                    <div id="confirm-password-hint" class="msg"></div>
+                </div>
+                <div class="row">
+                    <button class="btn" type="submit" id="signup-button" disabled>Sign Up</button>
+                    <button class="btn secondary" id="resend-code" type="button" style="display:none;">Resend
+                        Code</button>
+                </div>
+                <div id="signup-msg" class="msg"></div>
+            </form>
+
+            <div style="margin-top:16px; font-size:14px; color:var(--muted);">
+                Already have an account? <a href="/login" style="color: var(--primary);">Log in</a>
+            </div>
+        </div>
+    </main>
+    <script src="/static/javascript/jquerry.js"></script>
+    <script type="module" src="/static/javascript/utils.js"></script>
+    <script src="/static/javascript/signup.js"></script>
+    <input type="hidden" id="recaptcha-token" name="recaptcha_token">
+
+</body>
+
+</html>

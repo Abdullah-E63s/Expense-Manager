@@ -1,0 +1,52 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Sensitive credentials (NEVER commit these) ────────────────────────────────
+.env
+.env.*
+firebase-credentials.json
+*-firebase-adminsdk-*.json
+*.pem
+*.key
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Uploads and generated output ─────────────────────────────────────────────
+static/images/uploads/
+debug_crops/
+
+# ── Database files (app uses MySQL; SQLite files are dev artifacts) ───────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── OS artifacts ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE artifacts ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+tempCodeRunnerFile.py
+
+# ── ML model weights (large binary files — store on cloud or mount as volume) ─
+YOLOV9_MODEL/weights/*.pt
+
+# ── Testing artifacts ─────────────────────────────────────────────────────────
+test_processed.jpg
+ml_out.txt
+request.json

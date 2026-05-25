@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="RECAPTCHA_ENABLED" content="true">
+    <meta name="RECAPTCHA_SITE_KEY" content="6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP">
+    <title>My Account • Expense Manager</title>
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/account.css') }}">
+    <!-- reCAPTCHA Enterprise -->
+    <script
+        src="https://www.google.com/recaptcha/enterprise.js?render=6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP"></script>
+</head>
+
+<body>
+    <header class="header">
+        <div class="brand">
+            <a href="/dashboard" class="brand-logo-link"
+                style="display:inline-flex;align-items:center;text-decoration:none;">
+                <img src="/static/images/logo.png" alt="Logo" class="logo">
+            </a>
+            <div class="brand-name">Expense Manager</div>
+        </div>
+        <div class="header-actions">
+            <a href="/" class="btn secondary">Back to Dashboard</a>
+            <button id="logout-btn" class="btn secondary">Logout</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <a href="/" class="back-to-dashboard">← Back to Dashboard</a>
+        <h1>My Account</h1>
+
+        <div id="account-msg" class="msg"></div>
+
+        <!-- Profile Section -->
+        <div class="account-section">
+            <h2>Profile</h2>
+            <div class="avatar-row">
+                <img id="profile-avatar" class="avatar" src="/static/images/pfp.jpg" alt="Profile picture"
+                    onerror="this.src='/static/images/pfp.jpg'">
+                <div class="avatar-actions">
+                    <button type="button" id="change-avatar-btn" class="btn-account btn-save">Change Photo</button>
+                    <input type="file" id="avatar-input" accept="image/png, image/jpeg, image/webp"
+                        style="display:none">
+                </div>
+            </div>
+            <form id="profile-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="profile-username">Username</label>
+                        <input type="text" id="profile-username" class="form-control" maxlength="150"
+                            placeholder="yourname">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-email">Email</label>
+                        <input type="email" id="profile-email" class="form-control" disabled>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="profile-first-name">First name</label>
+                        <input type="text" id="profile-first-name" class="form-control" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-last-name">Last name</label>
+                        <input type="text" id="profile-last-name" class="form-control" maxlength="100">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="profile-phone-cc">Country code</label>
+                        <input type="text" id="profile-phone-cc" class="form-control" placeholder="+92" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-phone">Phone number</label>
+                        <input type="text" id="profile-phone" class="form-control" placeholder="3001234567"
+                            maxlength="20">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <small id="profile-last-login" class="muted"></small>
+                    </div>
+                    <div class="form-group">
+                        <small id="profile-signed-up" class="muted"></small>
+                    </div>
+                    <div class="form-group">
+                        <small id="profile-password-changed" class="muted"></small>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-account btn-save" id="save-profile-btn">Save Profile</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Change Password Section -->
+        <div class="account-section">
+            <h2>Change Password</h2>
+            <form id="change-password-form">
+                <div class="form-group">
+                    <label for="current-password">Current Password</label>
+                    <div class="password-input-container">
+                        <input type="password" id="current-password" class="form-control" required>
+                        <button type="button" class="show-password-btn" data-target="current-password">
+                            <span class="toggle-password" onclick="togglePassword('current-password')">👁️</span>
+                        </button>
+
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="new-password">New Password</label>
+                    <div class="password-input-container">
+                        <input type="password" id="new-password" class="form-control" required minlength="6">
+                        <button type="button" class="show-password-btn" data-target="new-password">
+                            <span class="toggle-password" onclick="togglePassword('new-password')">👁️</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm New Password</label>
+                    <div class="password-input-container">
+                        <input type="password" id="confirm-password" class="form-control" required minlength="6">
+                        <button type="button" class="show-password-btn" data-target="confirm-password">
+                        </button>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-account btn-save" id="update-password-btn">Update Password</button>
+                    <button type="button" id="forgot-password-btn" class="btn secondary">Forgot Password?</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Forgot Password Modal (outside the form to avoid validation conflicts) -->
+        <div id="forgot-password-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <h3>Reset Password</h3>
+                <p>Enter your email address to receive a password reset link.</p>
+                <div class="form-group">
+                    <label for="forgot-email">Email Address</label>
+                    <input type="email" id="forgot-email" name="email" class="form-control" autocomplete="email"
+                        required>
+                </div>
+                <div id="forgot-error" class="msg hidden"></div>
+                <div class="modal-actions">
+                    <button type="button" id="cancel-forgot-password" class="btn-account btn-cancel">Cancel</button>
+                    <button type="button" id="submit-forgot-password" class="btn-account btn-save">Send Reset
+                        Link</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Preferences Section -->
+        <div class="account-section">
+            <h2>Email Preferences</h2>
+            <form id="email-preferences">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="monthly-reports">
+                    <label for="monthly-reports">Receive monthly expense reports</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="budget-alerts">
+                    <label for="budget-alerts">Receive budget alerts</label>
+                </div>
+                <button type="submit" class="btn-account btn-save">Save Preferences</button>
+            </form>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="account-section danger-zone">
+            <h2>Danger Zone</h2>
+            <p>These actions are irreversible. Please proceed with caution.</p>
+
+            <div class="danger-action">
+                <h3>Delete Account</h3>
+                <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+                <button id="delete-account-btn" class="btn-account btn-danger">Delete My Account</button>
+
+                <!-- Delete Account Confirmation Modal -->
+                <div id="delete-account-modal" class="modal-overlay">
+                    <div class="modal-content">
+                        <h3>Confirm Account Deletion</h3>
+                        <p>This action is irreversible. All your data will be permanently deleted.</p>
+                        <div class="form-group">
+                            <label for="confirm-password-delete">Enter your password to confirm:</label>
+                            <div class="password-input-container">
+                                <input type="password" id="confirm-password-delete" class="form-control" required>
+                                <button type="button" class="show-password-btn" data-target="confirm-password-delete">
+                                    <span class="toggle-password"
+                                        onclick="togglePassword('confirm-password-delete')">👁️</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="delete-account-error" class="msg hidden"></div>
+                        <div class="modal-actions">
+                            <button id="cancel-delete-account" class="btn-account btn-cancel">Cancel</button>
+                            <button id="confirm-delete-account" class="btn-account btn-danger">Delete My
+                                Account</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="danger-action">
+                <h3>Export Data</h3>
+                <p>Download all your expense data as a CSV file.</p>
+                <button id="export-data-btn" class="btn-account btn-export">Export My Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='javascript/jquerry.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/common.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='javascript/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascript/account.js') }}"></script>

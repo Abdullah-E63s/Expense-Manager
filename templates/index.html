@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="RECAPTCHA_ENABLED" content="{{ recaptcha_enabled | lower }}">
+    <meta name="RECAPTCHA_SITE_KEY" content="{{ recaptcha_site_key }}">
+    <title>Dashboard • Expense Manager</title>
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+
+    <!-- CSS Dependencies -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/yolo-styles.css') }}">
+
+    <!-- JS Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    {% if recaptcha_enabled and recaptcha_site_key %}
+    <script src="https://www.google.com/recaptcha/enterprise.js?render={{ recaptcha_site_key }}" defer></script>
+    {% endif %}
+</head>
+
+<body>
+    <header class="header">
+        <div class="brand">
+            <a href="/dashboard" class="brand-logo-link"
+                style="display:inline-flex;align-items:center;text-decoration:none;">
+                <img src="/static/images/logo.png" alt="Logo" class="brand-logo">
+            </a>
+            <div class="brand-name">Expense Manager</div>
+        </div>
+        <div class="header-actions">
+            <img id="header-avatar" class="avatar-small" src="/static/images/pfp.jpg" alt="Avatar"
+                onerror="this.src='/static/images/pfp.jpg'">
+            <a href="/account" class="btn">
+                My Account
+            </a>
+            <button id="logout-btn" class="btn secondary">Logout</button>
+        </div>
+    </header>
+    <div class="container">
+        <div id="global-msg" class="msg"></div>
+
+        <!-- Analytics Overview -->
+        <div class="analytics-overview">
+            <div class="stat-card">
+                <div id="total-amount">$0.00</div>
+                <div>Total Spent</div>
+            </div>
+            <div class="stat-card">
+                <div id="total-expenses">0</div>
+                <div>Total Expenses</div>
+            </div>
+            <div class="stat-card">
+                <div id="average-expense">$0.00</div>
+                <div>Average per Expense</div>
+            </div>
+            <div class="stat-card">
+                <div id="remaining-budget">$0.00</div>
+                <div>Remaining Budget</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="panel chart-container">
+                <h3>Expenses by Category</h3>
+                <div class="chart-wrapper">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+            <div class="panel chart-container">
+                <h3>Monthly Spending</h3>
+                <div class="chart-wrapper">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+
+            <section class="panel">
+                <h3>Budget</h3>
+                <div id="budget-display">
+                    <p>No budget set</p>
+                </div>
+                <div id="budget-controls">
+                    <button id="add-budget-btn" class="btn primary">Add Budget</button>
+                    <button id="remove-budget-btn" class="btn secondary" style="display:none;">Remove Budget</button>
+                </div>
+                <div id="budget-form" style="display:none;">
+                    <input type="number" id="budget-amount" min="0" step="0.01" placeholder="Amount" required>
+                    <select id="budget-period">
+                        <option value="monthly">Monthly</option>
+                        <option value="weekly">Weekly</option>
+                    </select>
+                    <button id="save-budget-btn" class="btn primary">Save</button>
+                    <button id="cancel-budget-btn" class="btn secondary">Cancel</button>
+                </div>
+                <div id="budget-msg" class="msg"></div>
+            </section>
+            <section class="panel">
+                <h3>Add expense</h3>
+                <form id="expense-form">
+                    <div class="row">
+                        <div>
+                            <label for="expense-value">Value</label>
+                            <input id="expense-value" type="number" min="0" step="0.01" required placeholder="0.00">
+                        </div>
+                        <div>
+                            <label for="expense-category">Category (optional)</label>
+                            <input id="expense-category" type="text" placeholder="e.g. Food">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="expense-description">Description</label>
+                        <input id="expense-description" type="text" placeholder="e.g. Lunch at cafe">
+                    </div>
+
+                    <!-- Hidden date input for OCR -->
+                    <input type="hidden" id="expense-date" name="date">
+                    <button class="btn" type="submit">Add</button>
+                    <div id="expense-msg" class="msg"></div>
+                </form>
+            </section>
+            <section class="panel expenses-panel">
+                <div class="panel-header">
+                    <h3>Your expenses</h3>
+                    <button id="delete-all-btn" class="btn-text danger" title="Delete all expenses">Delete All</button>
+                </div>
+                <div id="expenses-list-container">
+                    <ul id="expenses-list"></ul>
+                    <div id="no-expenses" class="subtitle">
+                        <div class="receipt-placeholder">
+                            <div>
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M9 12H15M9 16H15M17 21H7C6.44772 21 6 20.5523 6 20V4C6 3.44772 6.44772 3 7 3H12.5858C12.851 3 13.1054 3.10536 13.2929 3.29289L18.7071 8.70711C18.8946 8.89464 19 9.149 19 9.41421V20C19 20.5523 18.5523 21 18 21Z"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <div>No receipts yet. Add your first expense!</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- YOLOv9 Image Processing Section -->
+            <section class="panel">
+                <h3>AI Reciept Processer</h3>
+                <div class="yolo-container">
+                    <div class="upload-area" id="yolo-drop-zone">
+                        <input type="file" id="yolo-image-input" accept="image/*" multiple style="display: none;">
+                        <div class="upload-prompt">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 13V19H5V13M12 5V19M5 13L9 9M15 9L19 13" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <p>Drag & drop images here or click to select</p>
+                            <p class="small">Supports JPG, PNG, WEBP </p>
+                        </div>
+                        <div class="image-preview" id="yolo-image-preview" style="display: none;">
+                            <img id="yolo-preview-image" src="#" alt="Preview">
+                            <div class="image-actions">
+                                <button id="yolo-process-btn" class="btn primary">
+                                    <span id="yolo-processing-spinner" class="spinner" style="display: none;"></span>
+                                    Process Image
+                                </button>
+                                <button id="yolo-clear-btn" class="btn secondary">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="results-container" id="yolo-results" style="display: none;">
+                        <h4>Detection Results</h4>
+                        <div class="detection-canvas">
+                            <canvas id="yolo-canvas"></canvas>
+                        </div>
+                        <div class="detection-results" id="yolo-detection-results">
+                            <!-- Results will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                <section class="panel" id="receipts-section">
+                    <h3>Your Receipts</h3>
+                    <div id="receipts-gallery" class="receipts-grid">
+                        <p class="empty-msg">No receipts uploaded yet.</p>
+                    </div>
+                </section>
+        </section>
+    </div>
+        <div id="edit-expense-modal" class="confirm-dialog" style="display: none;">
+            <div class="confirm-dialog-content">
+                <h3>Edit Expense</h3>
+                <form id="edit-expense-form">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-group">
+                        <label for="edit-value">Value</label>
+                        <input type="number" id="edit-value" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-category">Category</label>
+                        <input type="text" id="edit-category">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-description">Description</label>
+                        <input type="text" id="edit-description">
+                    </div>
+                    <div class="confirm-dialog-actions">
+                        <button type="button" class="btn secondary" id="edit-cancel-btn">Cancel</button>
+                        <button type="submit" class="btn primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="footer">© <span id="current-year"></span> Expense Manager</div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="{{ url_for('static', filename='javascript/common.js') }}" defer></script>
+    <script type="module" src="{{ url_for('static', filename='javascript/utils.js') }}" defer></script>
+
+    <!-- Application Scripts -->
+    <script src="{{ url_for('static', filename='javascript/dashboard.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='javascript/yolo-handler.js') }}" defer></script>
+</body>
+
+</html>

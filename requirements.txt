@@ -1,0 +1,57 @@
+# ============================================================
+# Expense Manager - Production Requirements
+# ============================================================
+
+# Core Flask
+Flask==3.0.0
+Werkzeug==3.0.1
+Flask-WTF==1.2.1
+WTForms==3.1.1
+Flask-Mail==0.9.1
+Flask-CORS==4.0.0
+
+# Database (raw PyMySQL only — no SQLAlchemy ORM needed)
+PyMySQL==1.1.0
+python-dotenv==1.0.0
+
+# Authentication & Security
+bcrypt==4.1.2
+PyJWT==2.8.0
+itsdangerous==2.1.2
+
+# Firebase & Google Auth
+firebase-admin==6.4.0
+google-auth==2.25.2
+google-auth-oauthlib==1.1.0
+
+# Gemini Vision API (receipt OCR)
+google-generativeai>=0.5.0
+
+# Image Processing
+Pillow==10.1.0
+numpy==1.26.2
+pillow-heif==0.16.0
+opencv-python-headless==4.8.1.78
+
+# Deep Learning - YOLOv9 inference (CPU-only)
+# For CPU-only install use:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+torch>=2.1.1
+torchvision>=0.16.1
+
+# YOLOv9 runtime dependencies (inference only — training deps removed)
+PyYAML>=5.3.1
+tqdm>=4.64.0
+scipy>=1.4.1
+
+# Utilities
+requests==2.31.0
+pytz==2023.3
+rapidfuzz==3.6.1
+
+# WSGI Server
+gunicorn==21.2.0
+
+# Windows-specific
+contourpy>=1.2.0,<1.3.0; sys_platform == "win32"
+contourpy>=1.2.0; sys_platform != "win32"

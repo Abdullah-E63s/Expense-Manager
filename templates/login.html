@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="RECAPTCHA_ENABLED" content="{{ recaptcha_enabled | lower }}">
+    <meta name="RECAPTCHA_SITE_KEY" content="{{ recaptcha_site_key }}">
+
+    <title>Login • Expense Manager</title>
+    <link rel="icon" type="image/png" href="/static/images/logo.png">
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% if recaptcha_enabled and recaptcha_site_key %}
+    <script src="https://www.google.com/recaptcha/enterprise.js?render={{ recaptcha_site_key }}" defer></script>
+    {% endif %}
+
+</head>
+
+<body>
+
+    <!-- Environment variables will be passed to utils.js -->
+    <div class="app-icon">
+        <img src="/static/images/logo.png" alt="Expense Manager" width="40" height="40">
+    </div>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>Welcome back</h1>
+                <p>Log in to manage your expenses</p>
+            </div>
+
+            <form id="login-form" class="login-form" method="POST" action="{{ url_for('auth.login') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input id="login-email" name="email" type="email" placeholder="you@example.com" required
+                        autocomplete="email" class="form-control">
+                    <div class="invalid-feedback">Please enter a valid email address</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <div class="password-input-container">
+                        <input id="login-password" name="password" type="password" placeholder="••••••••" required
+                            minlength="10" autocomplete="current-password" class="form-control">
+                        <button type="button" class="show-password-btn" data-input-id="login-password"
+                            aria-label="Toggle password visibility">
+                            <span class="show-icon">👁️</span>
+                            <span class="hide-icon" style="display:none;">🔒</span>
+                        </button>
+                    </div>
+                    <div class="invalid-feedback">Password must be at least 10 characters long</div>
+                </div>
+
+                <div id="login-msg" class="alert d-none" role="alert"></div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary btn-block" id="login-button">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <span class="button-text">Log In</span>
+                    </button>
+                </div>
+
+                <div class="divider">or</div>
+
+                <button id="google-login-btn" class="btn btn-secondary btn-block" type="button">
+                    Sign in with Google
+                </button>
+
+                <div class="divider">or</div>
+
+                <a href="/admin/login" class="btn btn-outline-primary btn-block">
+                    Login as Admin
+                </a>
+                <div id="admin-block-msg" style="display:none; color:red;"></div>
+                <div class="login-footer">
+                    <p>Don't have an account? <a href="/signup">Sign up</a></p>
+                    <p><a href="/forgot">Forgot password?</a></p>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <script type="module" src="/static/javascript/google-auth.js" defer></script>
+    <script type="module" src="/static/javascript/utils.js" defer></script>
+    <script type="module" src="/static/javascript/login.js" defer></script>
+    <input type="hidden" id="recaptcha-token" name="recaptcha_token">
+
+
+</body>
+
+</html>

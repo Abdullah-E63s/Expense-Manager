@@ -1,0 +1,51 @@
+Expense Manager Web App - Technology Stack Details
+==================================================
+
+Backend & Core Framework
+------------------------
+* Python 3
+* Flask (v3.0.0) 
+* Werkzeug (v3.0.1)
+* Gunicorn (v21.2.0) - WSGI HTTP Server deployment
+
+Database & Data Modeling
+------------------------
+* MySQL / SQLite (PyMySQL)
+* SQLAlchemy (v2.0.23) / Flask-SQLAlchemy (v3.1.1)
+* Flask-Migrate (v4.0.5)
+
+Authentication & Security Strategy
+----------------------------------
+* Flask-Login (v0.6.3)
+* Google OAuth / Google APIs (`google-auth`, `google-auth-oauthlib`)
+* Firebase Admin SDK
+* JWT (JSON Web Tokens)
+* Bcrypt for password hashing
+* Flask-WTF / CSRF protection mechanism
+* ReCAPTCHA Enterprise
+
+AI & Machine Learning (Receipt Analysis & NLP)
+----------------------------------------------
+* Gemini APIs (Google Generative AI) - Serves as the intelligent NLP layer/analyzer to parse extracted text, categorize items accurately based on natural context, provide intelligent system fallbacks, and answer user queries.
+* YOLOv9 (`ultralytics`, `torch`, `torchvision`) - Object detection to process specific regions within receipts.
+* EasyOCR (`easyocr`, `opencv-python-headless`) - Optical Character Recognition reading.
+* Fuzzy String Matching (`rapidfuzz`) - Handling OCR variances.
+
+Image Formatting
+----------------
+* Pillow / Python Imaging Library (PIL)
+* Extended formats (`pillow-heif`, `pillow-avif-plugin`)
+* NumPy & SciPy
+
+Frontend Configuration
+----------------------
+* Jinja2 (Serverside Template Rendering Engine builtin with Flask)
+* Vanilla HTML / CSS / JavaScript implementation natively integrated with the backend.
+* jQuery (local copy bundled as `jquerry.js`) - used for DOM manipulation and event handling.
+
+Utility Toolchains
+------------------
+* Requests / external HTTP calls
+* Flask-Mail (Using Gmail SMTP configurations)
+* Python-Dotenv for `.env` credentials
+

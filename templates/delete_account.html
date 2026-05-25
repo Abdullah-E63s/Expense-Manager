@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Delete Account • Expense Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/delete-account.css">
+</head>
+<body>
+    <div class="centered">
+        <div class="delete-account-container">
+            <h2>Delete Your Account</h2>
+            <div class="delete-warning">
+                <p><strong>Warning:</strong> This action cannot be undone. All your data will be permanently deleted.</p>
+                <p>Please confirm that you want to delete your account.</p>
+            </div>
+
+            <div class="confirmation-buttons">
+                <button type="button" id="cancel-btn" class="btn secondary">Cancel</button>
+                <button type="button" id="confirm-delete-btn" class="btn danger">Delete My Account</button>
+            </div>
+
+            <div id="error-msg" class="msg error hidden"></div>
+        </div>
+    </div>
+
+    <script src="/static/javascript/delete-account.js"></script>
+</body>
+</html>

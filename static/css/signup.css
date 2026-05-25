@@ -1,0 +1,83 @@
+/* Signup Page Styles */
+
+/* Email input container */
+.email-input-container {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+}
+
+#signup-email {
+    flex: 1;
+    min-width: 50%;
+    width: 100%;
+}
+
+#send-verification {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem;
+    width: 30%;
+}
+
+/* Password input container */
+.password-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-container input {
+    padding-right: 40px;
+    width: 100%;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    cursor: pointer;
+    user-select: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.toggle-password:hover {
+    opacity: 1;
+}
+
+/* Verification section */
+#verification-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+/* Form states */
+#signup-form input:disabled {
+    background-color: var(--bg-secondary);
+    cursor: not-allowed;
+}
+
+#signup-form button:disabled:not(#send-verification) {
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+/* Password strength indicator */
+#password-hint {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .row button {
+        width: 100%;
+    }
+}
