@@ -51,9 +51,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── Copy application source ───────────────────────────────────────────────────
 COPY --chown=user . .
 
-# ── Create logs directory (non-persistent — stdout logging is preferred) ──────
-RUN mkdir -p logs
-
 # ── HF Spaces runs on port 7860 ───────────────────────────────────────────────
 ENV PORT=7860
 EXPOSE 7860
