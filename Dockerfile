@@ -25,13 +25,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Create non-root user (Required by Hugging Face Spaces) ──────────────────
+RUN useradd -m -u 1000 user
+
 # ── Working directory ─────────────────────────────────────────────────────────
 WORKDIR /app
 
 # ── Install PyTorch CPU-only FIRST ───────────────────────────────────────────
 # This avoids pip resolving the CUDA variant from requirements.txt and pulling
 # an extra ~2 GB of GPU libraries that are unused on HF Spaces free CPU tier.
-COPY requirements.txt .
+COPY --chown=user requirements.txt .
+USER user
+ENV PATH="/home/user/.local/bin:$PATH"
+
 RUN pip install --no-cache-dir \
     torch==2.1.1+cpu \
     torchvision==0.16.1+cpu \
@@ -43,7 +49,7 @@ RUN pip install --no-cache-dir \
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Copy application source ───────────────────────────────────────────────────
-COPY . .
+COPY --chown=user . .
 
 # ── Create logs directory (non-persistent — stdout logging is preferred) ──────
 RUN mkdir -p logs
