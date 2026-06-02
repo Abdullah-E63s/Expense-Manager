@@ -1,7 +1,9 @@
 """Firebase initialization module — lazy and safe."""
 import os
 import json
+import base64
 import logging
+import tempfile
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -15,13 +17,37 @@ try:
 except Exception as e:
     logger.warning("Could not load .env: %s", str(e))
 
-# Credential path — check multiple env var names for compatibility
-FIREBASE_CREDENTIALS_PATH = (
-    os.getenv('FIREBASE_CREDENTIALS_PATH')
-    or os.getenv('FIREBASE_CREDENTIALS')
-    or os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    or 'firebase-credentials.json'
-)
+# Credential resolution order:
+#  1. FIREBASE_CREDENTIALS_BASE64  — base64-encoded JSON (preferred for HF Spaces / Vercel)
+#  2. FIREBASE_CREDENTIALS_PATH    — explicit file path env var
+#  3. FIREBASE_CREDENTIALS         — alias
+#  4. GOOGLE_APPLICATION_CREDENTIALS — GCP standard
+#  5. firebase-credentials.json    — local dev fallback
+
+_CRED_BASE64 = os.getenv('FIREBASE_CREDENTIALS_BASE64', '')
+
+if _CRED_BASE64:
+    # Decode base64 → write to a secure temp file → use that path
+    try:
+        _decoded = base64.b64decode(_CRED_BASE64.strip())
+        _tmp = tempfile.NamedTemporaryFile(
+            mode='wb', suffix='.json', delete=False, prefix='firebase_cred_'
+        )
+        _tmp.write(_decoded)
+        _tmp.flush()
+        _tmp.close()
+        FIREBASE_CREDENTIALS_PATH = _tmp.name
+        logger.info('Firebase: loaded credentials from FIREBASE_CREDENTIALS_BASE64 env var.')
+    except Exception as _b64_err:
+        logger.warning('Firebase: failed to decode FIREBASE_CREDENTIALS_BASE64: %s', _b64_err)
+        FIREBASE_CREDENTIALS_PATH = 'firebase-credentials.json'
+else:
+    FIREBASE_CREDENTIALS_PATH = (
+        os.getenv('FIREBASE_CREDENTIALS_PATH')
+        or os.getenv('FIREBASE_CREDENTIALS')
+        or os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+        or 'firebase-credentials.json'
+    )
 
 # Module-level references populated by init_firebase()
 firebase_admin = None

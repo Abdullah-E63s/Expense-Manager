@@ -1,26 +1,53 @@
-# AI Expense Manager 
+---
+title: Expense Manager
+emoji: 💰
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
 
-A modern, highly optimized, and AI-powered web application for tracking personal expenses. This application replaces manual data entry with intelligent automation, leveraging cutting-edge machine learning and vision models to instantly parse financial receipts and seamlessly manage budget limits.
+# Expense Manager
 
-### ✨ Key Features
-* **AI Receipt Processor:** Features a custom OCR engine (`GodModeOCR`) powered by Google's Gemini Flash 2.5 and YOLOv9. Users can drag and drop receipts, and the AI automatically extracts the total amount, category, and date—significantly reducing manual entry.
-* **Smart Budget Management:** Set monthly, weekly, or yearly budgets. The app tracks your spending in real-time and provides visual warnings when you are approaching or exceeding your limits.
-* **Advanced Analytics Dashboard:** Fully responsive frontend using Chart.js to visualize spending breakdowns by category and chronological monthly trends.
-* **Secure Authentication & Admin Controls:** Features Google Sign-In, Email/Password authentication (with email verification and password recovery), and a dedicated Admin Panel (`/admin`) for managing users and system health.
-* **Enterprise-Grade Security:** Fully protected against CSRF attacks across all API endpoints via Flask-WTF, equipped with Google reCAPTCHA v3/Enterprise for bot protection, and follows strict rate-limiting and security header best practices.
+AI-powered expense tracking web app with receipt OCR (YOLOv9 + Gemini Vision),
+Google OAuth, email verification, and an admin dashboard.
 
-### 🛠️ Tech Stack
-* **Backend Framework:** Python 3.x, Flask, Werkzeug
-* **Database:** MySQL (managed via custom `PyMySQL` queries optimized for low-resource environments, eliminating heavy ORM overhead).
-* **Machine Learning & AI:** 
-  * `PyTorch` (lazy-loaded to save RAM)
-  * `YOLOv9` (for object detection & receipt bounding boxes)
-  * `Gemini Flash 2.5` (for state-of-the-art OCR parsing)
-* **Frontend:** Vanilla HTML/CSS/JS (Lightweight, fully responsive, and asset-optimized without requiring a heavy JS framework). Chart.js for data visualization.
-* **Integrations:** Firebase Admin SDK, Google OAuth 2.0, SendGrid / SMTP for transactional emails.
+## Deployment Architecture
 
-### 🚀 Optimization Highlights
-Built specifically to run smoothly in low-resource deployment environments:
-* **Lazy Loading:** PyTorch and heavy ML models are only loaded into memory when a receipt is actually being processed, saving ~300MB of baseline RAM.
-* **File System Efficiency:** Uploaded receipts are processed entirely in-memory using byte streams and discarded securely, preventing disk bloat.
-* **Lean Dependencies:** Stripped of heavy libraries (like SQLAlchemy, EasyOCR, and excessive OpenCV usages) in favor of lightweight, direct API calls and efficient standard libraries.
+| Tier | Platform | Role |
+|------|----------|------|
+| Backend + ML | Hugging Face Spaces (this) | Flask API + YOLOv9 OCR |
+| Database | Railway | MySQL 8.x |
+| Static CDN | Vercel | CSS / JS / Images |
+
+## Required Environment Secrets
+
+Set these in the **Settings → Repository secrets** panel of this Space:
+
+```
+SECRET_KEY
+MYSQL_HOST
+MYSQL_USER
+MYSQL_PASSWORD
+MYSQL_DATABASE
+ADMIN_EMAIL
+ADMIN_PASSWORD
+MAIL_USERNAME
+MAIL_PASSWORD
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI
+FIREBASE_CREDENTIALS_BASE64
+RECAPTCHA_SITE_KEY
+RECAPTCHA_SECRET_KEY
+RECAPTCHA_ENTERPRISE_API_KEY
+RECAPTCHA_PROJECT_ID
+YOLOV9_WEIGHTS
+EXTERNAL_BASE_URL
+STATIC_CDN_URL
+ALLOWED_ORIGINS
+```
+
+See `.env.production.example` in the repo for documentation on each variable.

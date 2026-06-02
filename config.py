@@ -10,8 +10,9 @@ load_dotenv()
 class Config:
     """Base configuration shared by all environments."""
 
-    # Secret key
-    SECRET_KEY = os.environ.get("SECRET_KEY", "581aa394b9d75cc8d9f11872577d2734ba939d2a")
+    # Secret key — MUST be set as an environment variable in production.
+    # Never use a hardcoded fallback in production; leave empty to force explicit configuration.
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-insecure-key-change-me"
     EMAIL_TOKEN_SALT = os.environ.get("EMAIL_TOKEN_SALT", "email-confirm-salt")
 
     # -------------------------
@@ -84,6 +85,17 @@ class Config:
     RECAPTCHA_ENABLED = os.getenv("RECAPTCHA_ENABLED", "true").lower() == "true"
     RECAPTCHA_MIN_SCORE = float(os.getenv("RECAPTCHA_MIN_SCORE", 0.5))
     RECAPTCHA_ACTION = os.getenv("RECAPTCHA_ACTION", "login")
+
+    # -------------------------
+    # CDN & External URL
+    # -------------------------
+    # Set STATIC_CDN_URL to your Vercel deployment URL (e.g. https://my-app.vercel.app)
+    # to offload static asset delivery from Flask to the Vercel CDN.
+    STATIC_CDN_URL = os.getenv("STATIC_CDN_URL", "")
+
+    # Base URL used for building absolute links in emails and OAuth callbacks.
+    # e.g. https://your-app.hf.space  (no trailing slash)
+    EXTERNAL_BASE_URL = os.getenv("EXTERNAL_BASE_URL", "http://localhost:5000")
 
 
 class DevelopmentConfig(Config):

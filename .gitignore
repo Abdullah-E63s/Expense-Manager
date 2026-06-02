@@ -50,3 +50,19 @@ YOLOV9_MODEL/weights/*.pt
 test_processed.jpg
 ml_out.txt
 request.json
+
+# ── Deployment artifacts ──────────────────────────────────────────────────────
+# Vercel build output (local)
+.vercel/
+.vercel-output/
+
+# Temp Firebase credentials decoded from base64 env var at runtime
+firebase_cred_*.json
+
+# Never commit the real .env — only the example template
+.env
+.env.*
+!.env.production.example
+
+# HF Spaces — do NOT commit model weights to git (use LFS or download at startup)
+# YOLOV9_MODEL/weights/*.pt   # already listed above — keeping for clarity

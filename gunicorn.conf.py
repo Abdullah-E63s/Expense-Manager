@@ -29,7 +29,8 @@ max_requests_jitter = 50
 preload_app = False
 
 # ── Binding ──────────────────────────────────────────────────────────────────
-bind = os.environ.get("GUNICORN_BIND", "0.0.0.0:5000")
+# HF Spaces sets PORT=7860 automatically; GUNICORN_BIND overrides for custom setups.
+bind = os.environ.get("GUNICORN_BIND") or f"0.0.0.0:{os.environ.get('PORT', '5000')}"
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 accesslog = os.environ.get("GUNICORN_ACCESS_LOG", "-")   # stdout

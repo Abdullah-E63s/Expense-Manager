@@ -230,11 +230,11 @@ def decode_jwt_header(token):
 def verify_recaptcha(action: str, token: str | None, remote_ip: str | None = None) -> tuple[bool, float]:
     try:
         enabled = current_app.config.get('RECAPTCHA_ENABLED', True)
-        site_key = current_app.config.get('RECAPTCHA_SITE_KEY', '6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP')
-        secret = current_app.config.get('RECAPTCHA_SECRET_KEY', '6LfCHPMrAAAAAB9P2dYKr8Jx9hDhSBuZ-zwoMd8K')
-        api_key = current_app.config.get('RECAPTCHA_ENTERPRISE_API_KEY', 'AIzaSyAs8Fx1206dodmcRGbCpLgE-P1ybEVn3LY')
-        project_id = current_app.config.get('RECAPTCHA_PROJECT_ID', 'expense-2-63a15')
-        min_score = float(current_app.config.get('RECAPTCHA_MIN_SCORE', 1) or 1)
+        site_key = current_app.config.get('RECAPTCHA_SITE_KEY', '')
+        secret = current_app.config.get('RECAPTCHA_SECRET_KEY', '')
+        api_key = current_app.config.get('RECAPTCHA_ENTERPRISE_API_KEY', '')
+        project_id = current_app.config.get('RECAPTCHA_PROJECT_ID', '')
+        min_score = float(current_app.config.get('RECAPTCHA_MIN_SCORE', 0.5) or 0.5)
         if not enabled or not site_key or not (secret or api_key):
             current_app.logger.info(f"reCAPTCHA disabled or not configured; action={action}")
             return True, 1.0

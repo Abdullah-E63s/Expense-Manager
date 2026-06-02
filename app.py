@@ -36,13 +36,17 @@ app.config.update(
 )
 
 # ── Extensions ────────────────────────────────────────────────────────────────
+# Read allowed origins from env var (comma-separated) so production Vercel URL is included
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5000,http://127.0.0.1:5000,http://localhost:3000,http://127.0.0.1:3000",
+)
+_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 CORS(app,
      resources={
          r"/api/*": {
-             "origins": [
-                 "http://localhost:5000", "http://127.0.0.1:5000",
-                 "http://localhost:3000", "http://127.0.0.1:3000",
-             ],
+             "origins": _allowed_origins,
              "supports_credentials": True,
              "allow_headers": ["Content-Type", "X-CSRFToken", "Authorization"],
              "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -54,26 +58,44 @@ mail = Mail(app)
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 def _setup_logging():
-    """Configure rotating file logger for production."""
+    """Configure logging for production.
+
+    On Hugging Face Spaces (SPACE_ID env var is set automatically) or any
+    container environment, write to stdout only — disk paths may not be
+    persistent. In regular production servers a rotating file handler is
+    used as a fallback.
+    """
     if app.debug:
         logging.basicConfig(level=logging.DEBUG)
         return
 
+    fmt = logging.Formatter('%(asctime)s %(levelname)s: %(message)s [%(pathname)s:%(lineno)d]')
+
+    # Clear existing handlers to avoid duplicates on reload
+    for h in app.logger.handlers[:]:
+        app.logger.removeHandler(h)
+
+    # HF Spaces / container: always log to stdout
+    _on_hf_spaces = bool(os.getenv('SPACE_ID') or os.getenv('SPACES_ZERO_GPU'))
+    if _on_hf_spaces:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(fmt)
+        stream_handler.setLevel(logging.INFO)
+        app.logger.addHandler(stream_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('Expense Manager started (HF Spaces / container mode — stdout logging).')
+        return
+
+    # Standard server: rotating file + stdout
     try:
         logs_dir = os.path.join(os.path.dirname(__file__), 'logs')
         os.makedirs(logs_dir, exist_ok=True)
         log_file = os.path.join(logs_dir, 'expense_manager.log')
 
-        # Clear existing handlers to avoid duplicates on reload
-        for h in app.logger.handlers[:]:
-            app.logger.removeHandler(h)
-
         handler = RotatingFileHandler(
             log_file, maxBytes=10 * 1024 * 1024, backupCount=5, encoding='utf-8'
         )
-        handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [%(pathname)s:%(lineno)d]'
-        ))
+        handler.setFormatter(fmt)
         handler.setLevel(logging.INFO)
         app.logger.addHandler(handler)
         app.logger.setLevel(logging.INFO)
@@ -88,30 +110,38 @@ _setup_logging()
 # ── Database ──────────────────────────────────────────────────────────────────
 with app.app_context():
     init_db()
-    # Ensure admin account exists and is up-to-date on every startup
+    # Ensure admin account exists and is up-to-date on every startup.
+    # ADMIN_EMAIL and ADMIN_PASSWORD MUST be set as environment variables.
+    # No hardcoded fallback passwords — fail loudly if not configured in production.
     try:
-        _admin_email = os.getenv('ADMIN_EMAIL', 'abdullahjalalg@gmail.com')
-        _admin_pass  = os.getenv('ADMIN_PASSWORD', 'musa4200')
-        _row = execute_query(
-            "SELECT id FROM users WHERE email = %s", (_admin_email,), fetch_one=True
-        )
-        if _row:
-            execute_query(
-                """UPDATE users
-                   SET is_admin=TRUE, is_active=TRUE, is_verified=TRUE,
-                       deleted_at=NULL, password_hash=%s, updated_at=NOW()
-                   WHERE email=%s""",
-                (generate_password_hash(_admin_pass), _admin_email), commit=True
+        _admin_email = os.getenv('ADMIN_EMAIL')
+        _admin_pass  = os.getenv('ADMIN_PASSWORD')
+        if not _admin_email or not _admin_pass:
+            app.logger.warning(
+                'ADMIN_EMAIL or ADMIN_PASSWORD env vars not set — skipping admin account sync. '
+                'Set these in your environment/.env file before deploying to production.'
             )
         else:
-            execute_query(
-                """INSERT INTO users
-                       (email, password_hash, first_name, last_name,
-                        is_active, is_admin, is_verified, created_at, updated_at)
-                   VALUES (%s, %s, 'Admin', 'User', TRUE, TRUE, TRUE, NOW(), NOW())""",
-                (_admin_email, generate_password_hash(_admin_pass)), commit=True
+            _row = execute_query(
+                "SELECT id FROM users WHERE email = %s", (_admin_email,), fetch_one=True
             )
-        app.logger.info('Admin account verified: %s', _admin_email)
+            if _row:
+                execute_query(
+                    """UPDATE users
+                       SET is_admin=TRUE, is_active=TRUE, is_verified=TRUE,
+                           deleted_at=NULL, password_hash=%s, updated_at=NOW()
+                       WHERE email=%s""",
+                    (generate_password_hash(_admin_pass), _admin_email), commit=True
+                )
+            else:
+                execute_query(
+                    """INSERT INTO users
+                           (email, password_hash, first_name, last_name,
+                            is_active, is_admin, is_verified, created_at, updated_at)
+                       VALUES (%s, %s, 'Admin', 'User', TRUE, TRUE, TRUE, NOW(), NOW())""",
+                    (_admin_email, generate_password_hash(_admin_pass)), commit=True
+                )
+            app.logger.info('Admin account verified: %s', _admin_email)
     except Exception as _e:
         app.logger.warning('Could not ensure admin account: %s', _e)
 
@@ -176,6 +206,13 @@ def _versioned_url_for(endpoint, **values):
                 values['v'] = int(os.stat(file_path).st_mtime)
             except OSError:
                 pass
+        # If a Vercel CDN URL is configured, rewrite static asset URLs to the CDN.
+        # This offloads CSS/JS/image delivery from the Flask server.
+        cdn_url = app.config.get('STATIC_CDN_URL', '').rstrip('/')
+        if cdn_url:
+            generated = url_for(endpoint, **values)
+            # Strip the /static prefix and prepend CDN base
+            return cdn_url + generated.replace('/static', '', 1)
     return url_for(endpoint, **values)
 
 
