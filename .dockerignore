@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.production.example
+.git
+.gitignore
+.vscode
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+logs/
+*.log
+testing/
+*.bat
+*.ps1
