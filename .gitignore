@@ -43,8 +43,8 @@ desktop.ini
 *.swo
 tempCodeRunnerFile.py
 
-# ── ML model weights (large binary files — store on cloud or mount as volume) ─
-YOLOV9_MODEL/weights/*.pt
+# ── ML model weights (tracked via Git LFS — see .gitattributes) ─────────────────
+# *.pt files are tracked by LFS, NOT ignored
 
 # ── Testing artifacts ─────────────────────────────────────────────────────────
 test_processed.jpg
@@ -64,5 +64,4 @@ firebase_cred_*.json
 .env.*
 !.env.production.example
 
-# HF Spaces — do NOT commit model weights to git (use LFS or download at startup)
-# YOLOV9_MODEL/weights/*.pt   # already listed above — keeping for clarity
+# HF Spaces — model weights are tracked via Git LFS (*.pt in .gitattributes)

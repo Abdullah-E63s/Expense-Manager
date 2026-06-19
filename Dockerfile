@@ -1,6 +1,7 @@
 # ============================================================
 # Expense Manager — Hugging Face Spaces Dockerfile
 # SDK: Docker | Port: 7860
+# Database: Render MySQL (external)
 # ============================================================
 # Uses Python 3.11 slim base to keep image size manageable.
 # PyTorch CPU-only wheel is installed first (before requirements.txt)
@@ -57,6 +58,9 @@ EXPOSE 7860
 
 # ── Set production environment ────────────────────────────────────────────────
 ENV FLASK_ENV=production
+ENV MYSQL_PORT=3306
+# Use 1 worker on free tier to stay within 512MB RAM limit
+ENV GUNICORN_WORKERS=1
 
 # ── Launch via Gunicorn ───────────────────────────────────────────────────────
 CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]
