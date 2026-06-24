@@ -226,13 +226,9 @@ def add_security_headers(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
     if request.path.startswith('/static/'):
-        if request.args.get('v'):
-            response.cache_control.max_age = 31_536_000
-            response.cache_control.immutable = True
-        else:
-            response.cache_control.public = True
-            response.cache_control.max_age = 3_600
-            response.cache_control.must_revalidate = True
+        # Aggressively cache static assets on CDNs (like Vercel) for 1 year,
+        # and on the browser for 1 day.
+        response.headers['Cache-Control'] = 'public, max-age=86400, s-maxage=31536000'
     elif request.path.startswith('/api/'):
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
