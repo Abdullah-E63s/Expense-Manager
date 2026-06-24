@@ -1,11 +1,9 @@
-﻿{
-  "version": 2,
+{
   "rewrites": [
     { "source": "/css/(.*)", "destination": "/static/css/$1" },
     { "source": "/javascript/(.*)", "destination": "/static/javascript/$1" },
     { "source": "/js/(.*)", "destination": "/static/js/$1" },
     { "source": "/images/(.*)", "destination": "/static/images/$1" },
-    { "source": "/(.*).html", "destination": "/templates/$1.html" },
     { "source": "/admin_login", "destination": "/templates/admin_login.html" },
     { "source": "/dashboard", "destination": "/templates/dashboard.html" },
     { "source": "/login", "destination": "/templates/login.html" },
@@ -15,6 +13,7 @@
     { "source": "/account", "destination": "/templates/account.html" },
     { "source": "/admin", "destination": "/templates/admin/dashboard.html" },
     { "source": "/admin/dashboard", "destination": "/templates/admin/dashboard.html" },
+    { "source": "/(.*)\\.html", "destination": "/templates/$1.html" },
     { "source": "/", "destination": "/templates/index.html" }
   ],
   "headers": [
