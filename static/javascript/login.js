@@ -144,7 +144,7 @@ async function handleLogin(event) {
     try {
         // Always call the API login endpoint
         const action = '/api/auth/login';
-        console.log('Sending login request to:', (windowaction, { email: email.substring(0, 3) + '...' });
+        console.log('Sending login request to:', action, { email: email.substring(0, 3) + '...' });
 
         const recaptcha_token = typeof window.getRecaptchaToken === 'function'
             ? await window.getRecaptchaToken('login')
@@ -207,7 +207,7 @@ async function handleLogin(event) {
         }
         
         // Redirect to dashboard (use API_BASE for cross-domain Vercel â†’ HF)
-        window.location.href = (window'/dashboard';
+        window.location.href = '/dashboard';
         
     } catch (error) {
         console.error('Login error:', error);
