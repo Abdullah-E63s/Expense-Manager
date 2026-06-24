@@ -121,6 +121,33 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Avatar delete
+    const deleteAvatarBtn = document.getElementById('delete-avatar-btn');
+    if (deleteAvatarBtn) {
+        deleteAvatarBtn.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to delete your profile picture?')) return;
+            
+            showMessage(accountMsg, 'Deleting avatar...', 'info');
+            try {
+                const res = await fetch('/api/auth/account/profile-picture', {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-TOKEN': getCsrfToken() },
+                    credentials: 'include'
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Failed to delete avatar');
+                
+                if (avatarImg) {
+                    avatarImg.src = '/static/images/pfp.jpg';
+                }
+                showMessage(accountMsg, 'Profile picture deleted', 'success');
+            } catch (err) {
+                console.error('Avatar delete error:', err);
+                showMessage(accountMsg, err.message, 'error');
+            }
+        });
+    }
+
     // Password Change
     const changePasswordForm = document.getElementById('change-password-form');
     if (changePasswordForm) {

@@ -495,7 +495,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="exp-desc">${expense.description || 'No description'}</div>
                     <div class="exp-date">${new Date(expense.created_at || expense.date).toLocaleDateString()}</div>
                 </div>
-                </div>
                 <div class="exp-amount">$${parseFloat(expense.value || expense.amount).toFixed(2)}</div>
                 <div class="exp-actions">
                     <button class="exp-edit" data-id="${expense.id}" title="Edit">✎</button>

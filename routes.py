@@ -1027,6 +1027,26 @@ def account_profile():
         current_app.logger.error(f"Profile fetch error: {e}")
         return jsonify({'error': 'Failed to load profile'}), 500
 
+@auth_bp.delete('/account/profile-picture')
+@login_required
+def delete_profile_picture():
+    """Delete the current user's profile picture."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    try:
+        if user.profile_picture_url:
+            delete_image(user.profile_picture_url)
+            user.profile_picture_url = None
+            user.save()
+            return jsonify({"message": "Profile picture deleted", "profile_picture_url": None}), 200
+        else:
+            return jsonify({"message": "No profile picture to delete"}), 200
+    except Exception as e:
+        current_app.logger.error(f"Profile picture delete error: {e}")
+        return jsonify({"error": "Failed to delete profile picture"}), 500
+
 
 @auth_bp.route('/login', methods=['POST'])
 @cross_origin(supports_credentials=True)
