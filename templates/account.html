@@ -42,7 +42,7 @@
             <h2>Profile</h2>
             <div class="avatar-row">
                 <img id="profile-avatar" class="avatar" src="/static/images/pfp.jpg" alt="Profile picture"
-                    onerror="this.src='/static/images/pfp.jpg'">
+                    onerror="this.onerror=null; this.src='/static/images/pfp.jpg';">
                 <div class="avatar-actions">
                     <button type="button" id="change-avatar-btn" class="btn-account btn-save">Change Photo</button>
                     <input type="file" id="avatar-input" accept="image/png, image/jpeg, image/webp"
