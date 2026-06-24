@@ -590,18 +590,62 @@ def allowed_image(filename: str) -> bool:
 
 
 def save_image(file: FileStorage) -> str:
-    """Persist uploaded image and return its public static URL path."""
+    """Persist uploaded image to Firebase Storage and return its public URL."""
     filename = secure_filename(file.filename or "")
     if not filename or not allowed_image(filename):
         raise ValueError("Invalid image type")
     ext = filename.rsplit(".", 1)[-1].lower()
-    unique_name = f"{uuid.uuid4().hex}.{ext}"
+    unique_name = f"uploads/{uuid.uuid4().hex}.{ext}"
+    
+    if FIREBASE_AVAILABLE:
+        try:
+            from firebase_admin import storage
+            bucket = storage.bucket()
+            blob = bucket.blob(unique_name)
+            
+            file.seek(0)
+            blob.upload_from_file(file, content_type=file.content_type)
+            blob.make_public()
+            return blob.public_url
+        except Exception as e:
+            current_app.logger.error(f"Failed to upload to Firebase Storage: {e}")
+            # Fallback to local storage if Firebase fails
+            pass
+            
+    # Fallback local storage
     upload_dir = current_app.config["UPLOAD_FOLDER"]
     os.makedirs(upload_dir, exist_ok=True)
-    path = os.path.join(upload_dir, unique_name)
+    path = os.path.join(upload_dir, os.path.basename(unique_name))
+    file.seek(0)
     file.save(path)
     rel_path = os.path.relpath(path, current_app.static_folder).replace("\\", "/")
     return f"/static/{rel_path}"
+
+def delete_image(url: str):
+    """Delete an image from Firebase Storage or local filesystem."""
+    if not url:
+        return
+        
+    if "storage.googleapis.com" in url and FIREBASE_AVAILABLE:
+        try:
+            import urllib.parse
+            from firebase_admin import storage
+            bucket = storage.bucket()
+            prefix = f"https://storage.googleapis.com/{bucket.name}/"
+            if url.startswith(prefix):
+                blob_name = urllib.parse.unquote(url[len(prefix):])
+                blob = bucket.blob(blob_name)
+                blob.delete()
+        except Exception as e:
+            current_app.logger.warning(f"Failed to delete Firebase image {url}: {e}")
+    else:
+        # Local fallback
+        file_path = os.path.join(current_app.root_path, url.lstrip('/'))
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                current_app.logger.warning(f"Failed to delete legacy image {file_path}: {e}")
 
 
 YOLOV9_MODEL = None
@@ -2437,14 +2481,7 @@ def delete_expense(expense_id: int):
 
     # Clean up any legacy on-disk image (may no longer exist for new rows)
     if expense.picture_url:
-        import os
-        from flask import current_app
-        file_path = os.path.join(current_app.root_path, expense.picture_url.lstrip('/'))
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception as e:
-                current_app.logger.warning(f"Failed to delete legacy image {file_path}: {e}")
+        delete_image(expense.picture_url)
 
     expense.delete()
     return jsonify({'message': 'Expense deleted'}), 200
@@ -2483,16 +2520,10 @@ def delete_all_expenses():
     import os
     from flask import current_app
     
-    # physical cleanup of existing image files
     expenses = Expense.get_by_user(user.id)
     for expense in expenses:
         if expense.picture_url:
-            file_path = os.path.join(current_app.root_path, expense.picture_url.lstrip('/'))
-            if os.path.exists(file_path):
-                try:
-                    os.remove(file_path)
-                except Exception as e:
-                    pass
+            delete_image(expense.picture_url)
 
     Expense.delete_all_by_user(user.id)
     return jsonify({'message': 'All expenses and associated images deleted successfully'}), 200
