@@ -23,7 +23,7 @@ class Database:
     
     def _create_connection(self):
         """Create a new database connection."""
-        return pymysql.connect(
+        kwargs = dict(
             host=os.getenv('MYSQL_HOST', 'localhost'),
             port=int(os.getenv('MYSQL_PORT', 3306)),
             user=os.getenv('MYSQL_USER', 'root'),
@@ -36,6 +36,10 @@ class Database:
             read_timeout=30,
             write_timeout=30
         )
+        if os.getenv('MYSQL_SSL_REQUIRED', 'false').lower() in ('true', '1', 'yes'):
+            kwargs['ssl'] = {}
+            
+        return pymysql.connect(**kwargs)
         
     def _initialize_pool(self):
         if self._pool is None:
