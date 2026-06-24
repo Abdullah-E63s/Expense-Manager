@@ -23,7 +23,12 @@ class Database:
     
     def _create_connection(self):
         """Create a new database connection."""
-        kwargs = dict(
+        # SSL is required for cloud providers like Aiven.
+        # Set MYSQL_SSL_REQUIRED=false to disable for local dev.
+        ssl_required = os.getenv('MYSQL_SSL_REQUIRED', 'true').lower() not in ('false', '0', 'no')
+        ssl_dict = {} if ssl_required else None  # empty dict = SSL on, no cert pinning
+
+        return pymysql.connect(
             host=os.getenv('MYSQL_HOST', 'localhost'),
             port=int(os.getenv('MYSQL_PORT', 3306)),
             user=os.getenv('MYSQL_USER', 'root'),
@@ -34,12 +39,9 @@ class Database:
             autocommit=True,
             connect_timeout=30,
             read_timeout=30,
-            write_timeout=30
+            write_timeout=30,
+            ssl=ssl_dict,
         )
-        if os.getenv('MYSQL_SSL_REQUIRED', 'false').lower() in ('true', '1', 'yes'):
-            kwargs['ssl'] = {}
-            
-        return pymysql.connect(**kwargs)
         
     def _initialize_pool(self):
         if self._pool is None:
