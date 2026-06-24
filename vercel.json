@@ -1,35 +1,8 @@
 {
   "rewrites": [
-    { "source": "/css/(.*)", "destination": "/static/css/$1" },
-    { "source": "/javascript/(.*)", "destination": "/static/javascript/$1" },
-    { "source": "/js/(.*)", "destination": "/static/js/$1" },
-    { "source": "/images/(.*)", "destination": "/static/images/$1" },
-    { "source": "/admin_login", "destination": "/templates/admin_login.html" },
-    { "source": "/dashboard", "destination": "/templates/dashboard.html" },
-    { "source": "/login", "destination": "/templates/login.html" },
-    { "source": "/signup", "destination": "/templates/signup.html" },
-    { "source": "/forgot", "destination": "/templates/forgot.html" },
-    { "source": "/set-password", "destination": "/templates/set_password.html" },
-    { "source": "/account", "destination": "/templates/account.html" },
-    { "source": "/admin", "destination": "/templates/admin/dashboard.html" },
-    { "source": "/admin/dashboard", "destination": "/templates/admin/dashboard.html" },
-    { "source": "/(.*)\\.html", "destination": "/templates/$1.html" },
-    { "source": "/", "destination": "/templates/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/static/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    },
     {
       "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
-      ]
+      "destination": "https://ghost993-expensemanager.hf.space/$1"
     }
   ]
 }
