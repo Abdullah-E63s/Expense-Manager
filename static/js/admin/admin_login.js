@@ -11,7 +11,7 @@
   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
   try {
-    const response = await apiFetch("/admin/login", {
+    const response = await fetch("/admin/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

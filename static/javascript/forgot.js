@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let didSucceed = false;
         try {
             // Send reset password request
-            const response = await apiFetch('/api/auth/forgot-password', {
+            const response = await fetch('/api/auth/forgot-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

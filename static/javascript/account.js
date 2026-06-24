@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadProfile() {
         if (!profileForm) return;
         try {
-            const res = await apiFetch('/api/auth/account/profile', {
+            const res = await fetch('/api/auth/account/profile', {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 credentials: 'include'
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (recaptcha_token) console.log('[reCAPTCHA] save_profile token acquired');
                 else console.warn('[reCAPTCHA] save_profile token missing');
 
-                const res = await apiFetch('/api/auth/account/profile', {
+                const res = await fetch('/api/auth/account/profile', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData();
             formData.append('image', file);
             try {
-                const res = await apiFetch('/api/auth/account/profile-picture', {
+                const res = await fetch('/api/auth/account/profile-picture', {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': getCsrfToken() },
                     body: formData,
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (recaptcha_token) console.log('[reCAPTCHA] change_password token acquired');
                 else console.warn('[reCAPTCHA] change_password token missing');
 
-                const res = await apiFetch('/api/auth/change-password', {
+                const res = await fetch('/api/auth/change-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     ? await window.getRecaptchaToken('forgot_password')
                     : null;
 
-                const res = await apiFetch('/api/auth/forgot-password', {
+                const res = await fetch('/api/auth/forgot-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (recaptcha_token) console.log('[reCAPTCHA] delete_account token acquired');
                 else console.warn('[reCAPTCHA] delete_account token missing');
 
-                const res = await apiFetch('/api/auth/account', {
+                const res = await fetch('/api/auth/account', {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',

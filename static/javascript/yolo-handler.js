@@ -72,7 +72,7 @@
     }
 
     console.log(`Creating expense: ${description}, value: ${value}, hasImage: ${!!image}`);
-    const res = await apiFetch('/api/expenses', {
+    const res = await fetch('/api/expenses', {
       method: 'POST',
       headers: headers,
       credentials: 'include',
@@ -477,7 +477,7 @@
 
               console.log(`Sending ${file.name} to backend for advanced processing...`);
 
-              const res = await apiFetch('/api/yolo/detect', {
+              const res = await fetch('/api/yolo/detect', {
                 method: 'POST',
                 headers: headers,
                 body: formData

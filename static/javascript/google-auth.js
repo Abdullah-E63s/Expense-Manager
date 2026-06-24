@@ -5,7 +5,7 @@ let isGoogleInitialized = false;
 // Get client ID from server configuration first, fallback to constant
 async function getGoogleClientId() {
     try {
-        const response = await apiFetch('/api/auth/config');
+        const response = await fetch('/api/auth/config');
         if (response.ok) {
             const data = await response.json();
             if (data && data.googleClientId) {

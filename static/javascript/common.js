@@ -70,7 +70,7 @@ function showMessage(element, message, type = 'info') {
  * Handle logout action
  */
 function handleLogout() {
-    apiFetch('/api/auth/logout', {
+    fetch('/api/auth/logout', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

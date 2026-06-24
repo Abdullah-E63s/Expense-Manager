@@ -176,7 +176,7 @@ async function sendVerificationCode() {
             ? await window.getRecaptchaToken('send_verification')
             : null;
 
-        const response = await apiFetch('/api/auth/send-verification', {
+        const response = await fetch('/api/auth/send-verification', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -224,7 +224,7 @@ async function sendVerificationCode() {
             const recaptcha_token = typeof window.getRecaptchaToken === 'function'
                 ? await window.getRecaptchaToken('verify_code')
                 : null;
-            const response = await apiFetch('/api/auth/verify-code', {
+            const response = await fetch('/api/auth/verify-code', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
