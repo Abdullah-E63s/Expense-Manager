@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,7 @@
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
     {% block extra_css %}{% endblock %}
-    <script src="/static/javascript/config.js"></script></head>
+</head>
 <body>
     <div class="d-flex" id="wrapper">
         <!-- Sidebar -->
@@ -44,7 +44,7 @@
                         <i class="fas fa-bars"></i>
                     </button>
                     <div class="ms-auto">
-                        <span class="me-3">Welcome, {{ admin_user_name or 'Admin' }} ðŸ‘‘</span>
+                        <span class="me-3">Welcome, {{ admin_user_name or 'Admin' }} 👑</span>
                         <a href="{{ url_for('pages.dashboard') }}" class="btn btn-outline-primary btn-sm me-2">
                             <i class="fas fa-home"></i> Main Site
                         </a>

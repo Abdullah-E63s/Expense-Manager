@@ -1,4 +1,4 @@
-﻿/**
+/**
  * login.js - Handles login form functionality for the Expense Manager application
  */
 
@@ -52,10 +52,10 @@ function togglePasswordVisibility(inputId, button) {
     
     if (input.type === 'password') {
         input.type = 'text';
-        button.textContent = 'ðŸ‘ï¸';
+        button.textContent = '👁️';
     } else {
         input.type = 'password';
-        button.textContent = 'ðŸ‘ï¸';
+        button.textContent = '👁️';
     }
 }
 
@@ -206,7 +206,7 @@ async function handleLogin(event) {
             localStorage.setItem('user', JSON.stringify(data.user));
         }
         
-        // Redirect to dashboard (use API_BASE for cross-domain Vercel â†’ HF)
+        // Redirect to dashboard
         window.location.href = '/dashboard';
         
     } catch (error) {

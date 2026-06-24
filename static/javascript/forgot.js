@@ -1,4 +1,4 @@
-﻿// Forgot Password JavaScript
+// Forgot Password JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Get form elements
     const form = document.getElementById('forgot-password-form');

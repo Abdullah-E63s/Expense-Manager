@@ -1,4 +1,4 @@
-﻿// Account Page JavaScript
+// Account Page JavaScript
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize elements
     const profileForm = document.getElementById('profile-form');
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.error || 'Failed to update profile');
-                showMessage(accountMsg, 'âœ“ Profile saved successfully', 'success');
+                showMessage(accountMsg, '✓ Profile saved successfully', 'success');
                 loadProfile();
             } catch (err) {
                 console.error('Profile save error:', err);
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMessage(accountMsg, 'âœ“ Password changed successfully', 'success');
+                    showMessage(accountMsg, '✓ Password changed successfully', 'success');
                     changePasswordForm.reset();
                 } else {
                     throw new Error(data.message || data.error || 'Failed to change password');
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: JSON.stringify({ email, recaptcha_token })
                 });
                 if (res.ok) {
-                    showMessage(accountMsg, 'âœ“ Reset link sent! Check your email inbox.', 'success');
+                    showMessage(accountMsg, '✓ Reset link sent! Check your email inbox.', 'success');
                     hideForgot();
                 } else {
                     const data = await res.json();
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: JSON.stringify({ confirm: true, password, recaptcha_token })
                 });
                 if (res.ok) {
-                    showMessage(accountMsg, 'âœ“ Account deleted. Redirecting...', 'success');
+                    showMessage(accountMsg, '✓ Account deleted. Redirecting...', 'success');
                     setTimeout(() => window.location.href = '/', 2000);
                 } else {
                     const data = await res.json();

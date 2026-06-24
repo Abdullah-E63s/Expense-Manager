@@ -1,4 +1,4 @@
-﻿// Signup Page JavaScript
+// Signup Page JavaScript
 
 // Global variables
 let resendTimer;
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
         signupForm.querySelector('button[type="submit"]').disabled = !isVerified;
         
         if (isVerified) {
-            sendVerificationBtn.textContent = 'Verified âœ“';
+            sendVerificationBtn.textContent = 'Verified ✓';
             sendVerificationBtn.disabled = true;
             if (resendCodeBtn) resendCodeBtn.style.display = 'none';
         } else {

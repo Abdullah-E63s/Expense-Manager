@@ -1,4 +1,4 @@
-﻿// Dashboard JavaScript
+// Dashboard JavaScript
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize elements
     const logoutBtn = document.getElementById('logout-btn');
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
 
             if (response.ok) {
-                showMessage(globalMsg, 'âœ“ Expense added successfully!', 'success');
+                showMessage(globalMsg, '✓ Expense added successfully!', 'success');
                 expenseForm.reset();
                 await loadExpenses(); // Refresh the data
             } else {
@@ -498,8 +498,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <div class="exp-amount">$${parseFloat(expense.value || expense.amount).toFixed(2)}</div>
                 <div class="exp-actions">
-                    <button class="exp-edit" data-id="${expense.id}" title="Edit">âœŽ</button>
-                    <button class="exp-del" data-id="${expense.id}" title="Delete">Ã—</button>
+                    <button class="exp-edit" data-id="${expense.id}" title="Edit">✎</button>
+                    <button class="exp-del" data-id="${expense.id}" title="Delete">×</button>
                 </div>
             `;
 
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (response.ok) {
-                showMessage(globalMsg, 'âœ“ Expense deleted successfully!', 'success');
+                showMessage(globalMsg, '✓ Expense deleted successfully!', 'success');
                 await loadExpenses(); // Refresh the data
             } else {
                 const data = await response.json().catch(() => ({}));

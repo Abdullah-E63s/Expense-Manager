@@ -1,4 +1,4 @@
-﻿// Basic frontend logic for auth and expense CRUD using Fetch API
+// Basic frontend logic for auth and expense CRUD using Fetch API
 
 const API = {
   signup: "/api/auth/signup",
@@ -14,7 +14,7 @@ const API = {
   analytics: "/api/expenses/analytics",
 };
 
-async function fetch(url, options = {}) {
+async function apiFetch(url, options = {}) {
   const defaultHeaders = { "Content-Type": "application/json" };
   const opts = {
     credentials: "same-origin",
@@ -68,7 +68,7 @@ async function handleSignup(e) {
   }
 
   try {
-    await fetch(API.signup, {
+    await apiFetch(API.signup, {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
@@ -84,7 +84,7 @@ async function handleVerify(e) {
   const email = $("#signup-email")?.value?.trim().toLowerCase();
   const code = $("#verify-code")?.value?.trim();
   try {
-    await fetch(API.verify, {
+    await apiFetch(API.verify, {
       method: "POST",
       body: JSON.stringify({ email, code }),
     });
@@ -98,7 +98,7 @@ async function handleResend(e) {
   e.preventDefault();
   const email = $("#signup-email")?.value?.trim().toLowerCase();
   try {
-    await fetch(API.resend, { method: "POST", body: JSON.stringify({ email }) });
+    await apiFetch(API.resend, { method: "POST", body: JSON.stringify({ email }) });
     showMessage("#signup-msg", "If the email exists, a new code was sent.", "success");
   } catch (err) {
     showMessage("#signup-msg", err.message, "error");
@@ -181,7 +181,7 @@ async function handleLogin(e) {
 async function handleLogout(e) {
   e?.preventDefault?.();
   try {
-    await fetch(API.logout, { method: "POST" });
+    await apiFetch(API.logout, { method: "POST" });
     window.location.href = "/";
   } catch (err) {
     showMessage("#global-msg", err.message, "error");
@@ -194,7 +194,7 @@ async function handleLoginVerify(e) {
   const email = document.querySelector('#verify-email')?.value?.trim().toLowerCase();
   const code = document.querySelector('#verify-code')?.value?.trim();
   try {
-    await fetch(API.verify, { method: 'POST', body: JSON.stringify({ email, code }) });
+    await apiFetch(API.verify, { method: 'POST', body: JSON.stringify({ email, code }) });
     showMessage('#verify-msg', 'Email verified! You can now log in.', 'success');
     $("#verify-section")?.classList?.add("hidden");
   } catch (err) {
@@ -210,7 +210,7 @@ async function handleResendLoginCode(e) {
     return;
   }
   try {
-    await fetch(API.resend, { method: 'POST', body: JSON.stringify({ email }) });
+    await apiFetch(API.resend, { method: 'POST', body: JSON.stringify({ email }) });
     showMessage('#verify-msg', 'If the email exists, a new code was sent.', 'success');
   } catch (err) {
     showMessage('#verify-msg', err.message, 'error');
@@ -222,7 +222,7 @@ async function handleForgot(e) {
   e.preventDefault();
   const email = document.querySelector('#forgot-email')?.value?.trim().toLowerCase();
   try {
-    await fetch(API.forgot, { method: 'POST', body: JSON.stringify({ email }) });
+    await apiFetch(API.forgot, { method: 'POST', body: JSON.stringify({ email }) });
     showMessage('#forgot-msg', 'If the email exists, a reset code was sent.', 'success');
   } catch (err) {
     showMessage('#forgot-msg', err.message, 'error');
@@ -235,7 +235,7 @@ async function handleReset(e) {
   const code = document.querySelector('#reset-code')?.value?.trim();
   const newPassword = document.querySelector('#reset-password')?.value || '';
   try {
-    await fetch(API.reset, { method: 'POST', body: JSON.stringify({ email, code, new_password: newPassword }) });
+    await apiFetch(API.reset, { method: 'POST', body: JSON.stringify({ email, code, new_password: newPassword }) });
     showMessage('#reset-msg', 'Password has been reset. You can log in now.', 'success');
   } catch (err) {
     showMessage('#reset-msg', err.message, 'error');
@@ -329,7 +329,7 @@ async function handleCredentialResponse(response) {
 // ---------- Expenses ----------
 async function loadExpenses() {
   try {
-    const data = await fetch(API.expenses);
+    const data = await apiFetch(API.expenses);
     const list = $("#expenses-list");
     if (!list) return;
     list.innerHTML = "";
@@ -361,7 +361,7 @@ let monthlyChart = null;
 
 async function loadAnalytics() {
   try {
-    const data = await fetch(API.analytics);
+    const data = await apiFetch(API.analytics);
 
     // Update overview stats
     $("#total-amount").textContent = `$${data.total_amount.toFixed(2)}`;
@@ -561,7 +561,7 @@ async function handleCreateExpense(e) {
   }
 
   try {
-    await fetch(API.expenses, { method: "POST", body, headers });
+    await apiFetch(API.expenses, { method: "POST", body, headers });
     form.reset();
     await loadExpenses(); // This will also load analytics
     showMessage("#expense-msg", "Expense added.", "success");
@@ -634,7 +634,7 @@ async function updateExpense(id, value, category, description) {
   if (category) payload.category = category;
   if (description) payload.description = description;
   try {
-    await fetch(`${API.expenses}/${id}`, {
+    await apiFetch(`${API.expenses}/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });

@@ -1,4 +1,4 @@
-﻿// Delete Account Page JavaScript
+// Delete Account Page JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.getElementById('cancel-btn');

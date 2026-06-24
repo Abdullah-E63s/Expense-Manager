@@ -1,14 +1,14 @@
-﻿document.getElementById('restoreBtn').addEventListener('click', async () => {
+document.getElementById('restoreBtn').addEventListener('click', async () => {
   const email = document.getElementById('email').value.trim();
   const messageDiv = document.getElementById('message');
 
   if (!email) {
-    messageDiv.textContent = "âš ï¸ Please enter an email.";
+    messageDiv.textContent = "⚠️ Please enter an email.";
     messageDiv.className = "error";
     return;
   }
 
-  messageDiv.textContent = "â³ Processing...";
+  messageDiv.textContent = "⏳ Processing...";
   messageDiv.className = "";
 
   try {
@@ -29,7 +29,7 @@
     }
 
   } catch (err) {
-    messageDiv.textContent = "âŒ Server error: " + err.message;
+    messageDiv.textContent = "❌ Server error: " + err.message;
     messageDiv.className = "error";
   }
 });

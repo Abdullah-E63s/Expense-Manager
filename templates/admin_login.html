@@ -1,20 +1,20 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Admin Login â€¢ Expense Manager</title>
+  <title>Admin Login • Expense Manager</title>
   <link rel="stylesheet" href="/static/css/admin_login.css" />
   <script defer src="/static/js/admin/admin_login.js"></script>
-    <script src="/static/javascript/config.js"></script></head>
+</head>
 
 <body>
   <div class="login-container">
     <div class="login-card">
       <h1>Admin Login</h1>
-      <p class="subtitle">Restricted access â€“ authorized personnel only</p>
+      <p class="subtitle">Restricted access – authorized personnel only</p>
 
       <form id="admin-login-form" method="POST" action="/admin/login">
         <div class="form-group">

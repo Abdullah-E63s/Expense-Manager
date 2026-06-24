@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 
 <head>
@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="RECAPTCHA_ENABLED" content="{{ recaptcha_enabled | lower }}">
     <meta name="RECAPTCHA_SITE_KEY" content="{{ recaptcha_site_key }}">
-    <title>Dashboard â€¢ Expense Manager</title>
+    <title>Dashboard • Expense Manager</title>
     <link rel="icon" type="image/png" href="/static/images/logo.png">
 
     <!-- CSS Dependencies -->
@@ -19,7 +19,7 @@
     {% if recaptcha_enabled and recaptcha_site_key %}
     <script src="https://www.google.com/recaptcha/enterprise.js?render={{ recaptcha_site_key }}" defer></script>
     {% endif %}
-    <script src="/static/javascript/config.js"></script></head>
+</head>
 
 <body>
     <header class="header">
@@ -32,7 +32,7 @@
         </div>
         <div class="header-actions">
             <img id="header-avatar" class="avatar-small" src="/static/images/pfp.jpg" alt="Avatar"
-                onerror="this.onerror=null; this.src='/static/images/pfp.jpg';">
+                onerror="this.onerror=null; this.src='/static/images/pfp.jpg'">
             <a href="/account" class="btn">
                 My Account
             </a>
@@ -218,7 +218,7 @@
             </div>
         </div>
 
-        <div class="footer">Â© <span id="current-year"></span> Expense Manager</div>
+        <div class="footer">© <span id="current-year"></span> Expense Manager</div>
     </div>
 
     <!-- JavaScript Libraries -->

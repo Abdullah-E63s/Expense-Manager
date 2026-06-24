@@ -1,4 +1,4 @@
-﻿// Set Password JavaScript
+// Set Password JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('set-password-form');
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const icon = hint.querySelector('.hint-icon');
             if (icon) {
-                icon.textContent = isValid ? 'âœ“' : 'â€¢';
+                icon.textContent = isValid ? '✓' : '•';
             }
         });
     }
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const isPassword = input.type === 'password';
         input.type = isPassword ? 'text' : 'password';
-        toggle.textContent = isPassword ? 'ðŸ‘ï¸' : 'ðŸ‘ï¸';
+        toggle.textContent = isPassword ? '👁️' : '👁️';
         toggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
     }
     
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (input && input.type) {
                 const isPassword = input.type === 'password';
                 input.type = isPassword ? 'text' : 'password';
-                e.target.textContent = isPassword ? 'ðŸ‘ï¸' : 'ðŸ‘ï¸';
+                e.target.textContent = isPassword ? '👁️' : '👁️';
                 e.target.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
             }
         });

@@ -1,4 +1,4 @@
-﻿// Account Page JavaScript
+// Account Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
     const changePasswordForm = document.getElementById('change-password-form');
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const input = this.previousElementSibling;
             const isPassword = input.type === 'password';
             input.type = isPassword ? 'text' : 'password';
-            this.textContent = isPassword ? 'ðŸ‘ï¸' : 'ðŸ‘ï¸';
+            this.textContent = isPassword ? '👁️' : '👁️';
             this.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
         });
     });
