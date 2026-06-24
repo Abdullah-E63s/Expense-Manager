@@ -1,4 +1,4 @@
-// Account Page JavaScript
+﻿// Account Page JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // DOM Elements
     const changePasswordForm = document.getElementById('change-password-form');
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const input = this.previousElementSibling;
             const isPassword = input.type === 'password';
             input.type = isPassword ? 'text' : 'password';
-            this.textContent = isPassword ? '👁️' : '👁️';
+            this.textContent = isPassword ? 'ðŸ‘ï¸' : 'ðŸ‘ï¸';
             this.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
         });
     });
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.textContent = 'Updating...';
         
         try {
-            const response = await fetch('/api/account/change-password', {
+            const response = await apiFetch('/api/account/change-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.textContent = 'Saving...';
         
         try {
-            const response = await fetch('/api/account/preferences', {
+            const response = await apiFetch('/api/account/preferences', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.textContent = 'Deleting...';
             
             try {
-                const response = await fetch('/api/account/delete', {
+                const response = await apiFetch('/api/account/delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -276,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load user preferences
     async function loadUserPreferences() {
         try {
-            const response = await fetch('/api/account/preferences', {
+            const response = await apiFetch('/api/account/preferences', {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }

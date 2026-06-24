@@ -1,4 +1,4 @@
-// Signup Page JavaScript
+﻿// Signup Page JavaScript
 
 // Global variables
 let resendTimer;
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
         signupForm.querySelector('button[type="submit"]').disabled = !isVerified;
         
         if (isVerified) {
-            sendVerificationBtn.textContent = 'Verified ✓';
+            sendVerificationBtn.textContent = 'Verified âœ“';
             sendVerificationBtn.disabled = true;
             if (resendCodeBtn) resendCodeBtn.style.display = 'none';
         } else {
@@ -176,7 +176,7 @@ async function sendVerificationCode() {
             ? await window.getRecaptchaToken('send_verification')
             : null;
 
-        const response = await fetch('/api/auth/send-verification', {
+        const response = await apiFetch('/api/auth/send-verification', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -224,7 +224,7 @@ async function sendVerificationCode() {
             const recaptcha_token = typeof window.getRecaptchaToken === 'function'
                 ? await window.getRecaptchaToken('verify_code')
                 : null;
-            const response = await fetch('/api/auth/verify-code', {
+            const response = await apiFetch('/api/auth/verify-code', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

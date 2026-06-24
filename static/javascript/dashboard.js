@@ -1,4 +1,4 @@
-// Dashboard JavaScript
+﻿// Dashboard JavaScript
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize elements
     const logoutBtn = document.getElementById('logout-btn');
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Load and set header avatar image
     async function loadProfileAvatar() {
         try {
-            const res = await fetch('/api/auth/account/profile', {
+            const res = await apiFetch('/api/auth/account/profile', {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 credentials: 'include'
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function handleLogout(e) {
         try {
             e && e.preventDefault && e.preventDefault();
-            const response = await fetch('/api/auth/logout', {
+            const response = await apiFetch('/api/auth/logout', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (recaptcha_token) console.log('[reCAPTCHA] add_expense token acquired');
             else console.warn('[reCAPTCHA] add_expense token missing');
 
-            const response = await fetch('/api/expenses', {
+            const response = await apiFetch('/api/expenses', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
 
             if (response.ok) {
-                showMessage(globalMsg, '✓ Expense added successfully!', 'success');
+                showMessage(globalMsg, 'âœ“ Expense added successfully!', 'success');
                 expenseForm.reset();
                 await loadExpenses(); // Refresh the data
             } else {
@@ -498,8 +498,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 <div class="exp-amount">$${parseFloat(expense.value || expense.amount).toFixed(2)}</div>
                 <div class="exp-actions">
-                    <button class="exp-edit" data-id="${expense.id}" title="Edit">✎</button>
-                    <button class="exp-del" data-id="${expense.id}" title="Delete">×</button>
+                    <button class="exp-edit" data-id="${expense.id}" title="Edit">âœŽ</button>
+                    <button class="exp-del" data-id="${expense.id}" title="Delete">Ã—</button>
                 </div>
             `;
 
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (response.ok) {
-                showMessage(globalMsg, '✓ Expense deleted successfully!', 'success');
+                showMessage(globalMsg, 'âœ“ Expense deleted successfully!', 'success');
                 await loadExpenses(); // Refresh the data
             } else {
                 const data = await response.json().catch(() => ({}));
@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 ? await window.getRecaptchaToken('delete_all_expenses')
                 : null;
 
-            const response = await fetch('/api/expenses/all', {
+            const response = await apiFetch('/api/expenses/all', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -730,7 +730,7 @@ async function handleDeleteAccount() {
     if (!confirmed) return;
 
     try {
-        const response = await fetch('/api/auth/account', {
+        const response = await apiFetch('/api/auth/account', {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -774,7 +774,7 @@ function initExpensesList() {
 // Budget functionality
 async function loadBudget() {
     try {
-        const res = await fetch('/api/expenses/budget', {
+        const res = await apiFetch('/api/expenses/budget', {
             method: 'GET',
             credentials: 'include',
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
@@ -844,7 +844,7 @@ function setupBudgetEvents() {
     if (removeBtn) {
         removeBtn.addEventListener('click', async () => {
             try {
-                const res = await fetch('/api/expenses/budget', {
+                const res = await apiFetch('/api/expenses/budget', {
                     method: 'DELETE',
                     credentials: 'include',
                     headers: {
@@ -874,7 +874,7 @@ function setupBudgetEvents() {
                 return;
             }
             try {
-                const res = await fetch('/api/expenses/budget', {
+                const res = await apiFetch('/api/expenses/budget', {
                     method: 'POST',
                     credentials: 'include',
                     headers: {

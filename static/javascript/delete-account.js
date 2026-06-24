@@ -1,4 +1,4 @@
-// Delete Account Page JavaScript
+﻿// Delete Account Page JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.getElementById('cancel-btn');
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
                 
                 // Send delete request
-                const response = await fetch('/api/account/delete', {
+                const response = await apiFetch('/api/account/delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

@@ -144,7 +144,7 @@ async function handleLogin(event) {
     try {
         // Always call the API login endpoint
         const action = '/api/auth/login';
-        console.log('Sending login request to:', action, { email: email.substring(0, 3) + '...' });
+        console.log('Sending login request to:', (window.API_BASE || '') + action, { email: email.substring(0, 3) + '...' });
 
         const recaptcha_token = typeof window.getRecaptchaToken === 'function'
             ? await window.getRecaptchaToken('login')
@@ -155,7 +155,7 @@ async function handleLogin(event) {
             console.warn('[reCAPTCHA] login token missing');
         }
 
-        const response = await fetch(action, {
+        const response = await apiFetch(action, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -206,8 +206,8 @@ async function handleLogin(event) {
             localStorage.setItem('user', JSON.stringify(data.user));
         }
         
-        // Redirect to dashboard
-        window.location.href = '/dashboard';
+        // Redirect to dashboard (use API_BASE for cross-domain Vercel → HF)
+        window.location.href = (window.API_BASE || '') + '/dashboard';
         
     } catch (error) {
         console.error('Login error:', error);

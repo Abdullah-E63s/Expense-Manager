@@ -1,11 +1,11 @@
-// Google OAuth2 Configuration
+﻿// Google OAuth2 Configuration
 let GOOGLE_CLIENT_ID = "359684919711-q7ehjfbsapj9tenm4h3e4q2f678igong.apps.googleusercontent.com";
 let isGoogleInitialized = false;
 
 // Get client ID from server configuration first, fallback to constant
 async function getGoogleClientId() {
     try {
-        const response = await fetch('/api/auth/config');
+        const response = await apiFetch('/api/auth/config');
         if (response.ok) {
             const data = await response.json();
             if (data && data.googleClientId) {

@@ -1,18 +1,18 @@
-document.getElementById('restoreBtn').addEventListener('click', async () => {
+﻿document.getElementById('restoreBtn').addEventListener('click', async () => {
   const email = document.getElementById('email').value.trim();
   const messageDiv = document.getElementById('message');
 
   if (!email) {
-    messageDiv.textContent = "⚠️ Please enter an email.";
+    messageDiv.textContent = "âš ï¸ Please enter an email.";
     messageDiv.className = "error";
     return;
   }
 
-  messageDiv.textContent = "⏳ Processing...";
+  messageDiv.textContent = "â³ Processing...";
   messageDiv.className = "";
 
   try {
-    const response = await fetch("/api/restore", {
+    const response = await apiFetch("/api/restore", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email })
@@ -29,7 +29,7 @@ document.getElementById('restoreBtn').addEventListener('click', async () => {
     }
 
   } catch (err) {
-    messageDiv.textContent = "❌ Server error: " + err.message;
+    messageDiv.textContent = "âŒ Server error: " + err.message;
     messageDiv.className = "error";
   }
 });

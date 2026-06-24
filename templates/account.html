@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 
 <head>
@@ -7,14 +7,14 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="RECAPTCHA_ENABLED" content="true">
     <meta name="RECAPTCHA_SITE_KEY" content="6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP">
-    <title>My Account • Expense Manager</title>
+    <title>My Account â€¢ Expense Manager</title>
     <link rel="icon" type="image/png" href="/static/images/logo.png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/account.css') }}">
     <!-- reCAPTCHA Enterprise -->
     <script
         src="https://www.google.com/recaptcha/enterprise.js?render=6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP"></script>
-</head>
+    <script src="/static/javascript/config.js"></script></head>
 
 <body>
     <header class="header">
@@ -32,7 +32,7 @@
     </header>
 
     <div class="container">
-        <a href="/" class="back-to-dashboard">← Back to Dashboard</a>
+        <a href="/" class="back-to-dashboard">â† Back to Dashboard</a>
         <h1>My Account</h1>
 
         <div id="account-msg" class="msg"></div>
@@ -108,7 +108,7 @@
                     <div class="password-input-container">
                         <input type="password" id="current-password" class="form-control" required>
                         <button type="button" class="show-password-btn" data-target="current-password">
-                            <span class="toggle-password" onclick="togglePassword('current-password')">👁️</span>
+                            <span class="toggle-password" onclick="togglePassword('current-password')">ðŸ‘ï¸</span>
                         </button>
 
                     </div>
@@ -118,7 +118,7 @@
                     <div class="password-input-container">
                         <input type="password" id="new-password" class="form-control" required minlength="6">
                         <button type="button" class="show-password-btn" data-target="new-password">
-                            <span class="toggle-password" onclick="togglePassword('new-password')">👁️</span>
+                            <span class="toggle-password" onclick="togglePassword('new-password')">ðŸ‘ï¸</span>
                         </button>
                     </div>
                 </div>
@@ -193,7 +193,7 @@
                                 <input type="password" id="confirm-password-delete" class="form-control" required>
                                 <button type="button" class="show-password-btn" data-target="confirm-password-delete">
                                     <span class="toggle-password"
-                                        onclick="togglePassword('confirm-password-delete')">👁️</span>
+                                        onclick="togglePassword('confirm-password-delete')">ðŸ‘ï¸</span>
                                 </button>
                             </div>
                         </div>

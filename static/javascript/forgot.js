@@ -1,4 +1,4 @@
-// Forgot Password JavaScript
+﻿// Forgot Password JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Get form elements
     const form = document.getElementById('forgot-password-form');
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let didSucceed = false;
         try {
             // Send reset password request
-            const response = await fetch('/api/auth/forgot-password', {
+            const response = await apiFetch('/api/auth/forgot-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

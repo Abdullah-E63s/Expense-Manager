@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Common JavaScript functions used across the Expense Manager application
  */
 
@@ -11,10 +11,10 @@ function togglePasswordVisibility(inputId, button) {
     const input = document.getElementById(inputId);
     if (input.type === 'password') {
         input.type = 'text';
-        button.textContent = '👁️';
+        button.textContent = 'ðŸ‘ï¸';
     } else {
         input.type = 'password';
-        button.textContent = '👁️';
+        button.textContent = 'ðŸ‘ï¸';
     }
 }
 
@@ -70,7 +70,7 @@ function showMessage(element, message, type = 'info') {
  * Handle logout action
  */
 function handleLogout() {
-    fetch('/api/auth/logout', {
+    apiFetch('/api/auth/logout', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

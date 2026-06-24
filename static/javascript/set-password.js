@@ -1,4 +1,4 @@
-// Set Password JavaScript
+﻿// Set Password JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('set-password-form');
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const icon = hint.querySelector('.hint-icon');
             if (icon) {
-                icon.textContent = isValid ? '✓' : '•';
+                icon.textContent = isValid ? 'âœ“' : 'â€¢';
             }
         });
     }
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const isPassword = input.type === 'password';
         input.type = isPassword ? 'text' : 'password';
-        toggle.textContent = isPassword ? '👁️' : '👁️';
+        toggle.textContent = isPassword ? 'ðŸ‘ï¸' : 'ðŸ‘ï¸';
         toggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
     }
     
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Send reset password request
-            const response = await fetch('/api/auth/reset-password', {
+            const response = await apiFetch('/api/auth/reset-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (input && input.type) {
                 const isPassword = input.type === 'password';
                 input.type = isPassword ? 'text' : 'password';
-                e.target.textContent = isPassword ? '👁️' : '👁️';
+                e.target.textContent = isPassword ? 'ðŸ‘ï¸' : 'ðŸ‘ï¸';
                 e.target.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
             }
         });

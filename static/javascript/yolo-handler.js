@@ -1,4 +1,4 @@
-// yolo-handler.js
+﻿// yolo-handler.js
 (function () {
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -72,7 +72,7 @@
     }
 
     console.log(`Creating expense: ${description}, value: ${value}, hasImage: ${!!image}`);
-    const res = await fetch('/api/expenses', {
+    const res = await apiFetch('/api/expenses', {
       method: 'POST',
       headers: headers,
       credentials: 'include',
@@ -477,7 +477,7 @@
 
               console.log(`Sending ${file.name} to backend for advanced processing...`);
 
-              const res = await fetch('/api/yolo/detect', {
+              const res = await apiFetch('/api/yolo/detect', {
                 method: 'POST',
                 headers: headers,
                 body: formData
@@ -549,7 +549,7 @@
               });
 
               allItems = allItems.concat(uniqueItems);
-              showYoloToast(`Processed: ${file.name} • ${uniqueItems.length} item(s)`, 'success');
+              showYoloToast(`Processed: ${file.name} â€¢ ${uniqueItems.length} item(s)`, 'success');
             } else if (!noItemFiles.includes(file.name)) {
               // Only add to noItemFiles if not already caught by the not_a_receipt check
               noItemFiles.push(file.name || `Image ${i + 1}`);
@@ -559,7 +559,7 @@
             console.error(`Error processing file ${file.name}:`, err);
             // Continue with other files
             if (!noItemFiles.includes(file.name)) noItemFiles.push(file.name || `Image ${i + 1}`);
-            showYoloToast(`Error: ${file.name} • ${err.message || 'failed'}`, 'warn', 2800);
+            showYoloToast(`Error: ${file.name} â€¢ ${err.message || 'failed'}`, 'warn', 2800);
           }
         }
 

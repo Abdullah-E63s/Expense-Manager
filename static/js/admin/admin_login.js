@@ -1,4 +1,4 @@
-document.getElementById("admin-login-form").addEventListener("submit", async (e) => {
+﻿document.getElementById("admin-login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const username = document.getElementById("admin-username").value.trim();
@@ -11,7 +11,7 @@ document.getElementById("admin-login-form").addEventListener("submit", async (e)
   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
   try {
-    const response = await fetch("/admin/login", {
+    const response = await apiFetch("/admin/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,4 +1,4 @@
-// Account Page JavaScript
+﻿// Account Page JavaScript
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize elements
     const profileForm = document.getElementById('profile-form');
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadProfile() {
         if (!profileForm) return;
         try {
-            const res = await fetch('/api/auth/account/profile', {
+            const res = await apiFetch('/api/auth/account/profile', {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
                 credentials: 'include'
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (recaptcha_token) console.log('[reCAPTCHA] save_profile token acquired');
                 else console.warn('[reCAPTCHA] save_profile token missing');
 
-                const res = await fetch('/api/auth/account/profile', {
+                const res = await apiFetch('/api/auth/account/profile', {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.error || 'Failed to update profile');
-                showMessage(accountMsg, '✓ Profile saved successfully', 'success');
+                showMessage(accountMsg, 'âœ“ Profile saved successfully', 'success');
                 loadProfile();
             } catch (err) {
                 console.error('Profile save error:', err);
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData();
             formData.append('image', file);
             try {
-                const res = await fetch('/api/auth/account/profile-picture', {
+                const res = await apiFetch('/api/auth/account/profile-picture', {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': getCsrfToken() },
                     body: formData,
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (recaptcha_token) console.log('[reCAPTCHA] change_password token acquired');
                 else console.warn('[reCAPTCHA] change_password token missing');
 
-                const res = await fetch('/api/auth/change-password', {
+                const res = await apiFetch('/api/auth/change-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    showMessage(accountMsg, '✓ Password changed successfully', 'success');
+                    showMessage(accountMsg, 'âœ“ Password changed successfully', 'success');
                     changePasswordForm.reset();
                 } else {
                     throw new Error(data.message || data.error || 'Failed to change password');
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     ? await window.getRecaptchaToken('forgot_password')
                     : null;
 
-                const res = await fetch('/api/auth/forgot-password', {
+                const res = await apiFetch('/api/auth/forgot-password', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: JSON.stringify({ email, recaptcha_token })
                 });
                 if (res.ok) {
-                    showMessage(accountMsg, '✓ Reset link sent! Check your email inbox.', 'success');
+                    showMessage(accountMsg, 'âœ“ Reset link sent! Check your email inbox.', 'success');
                     hideForgot();
                 } else {
                     const data = await res.json();
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (recaptcha_token) console.log('[reCAPTCHA] delete_account token acquired');
                 else console.warn('[reCAPTCHA] delete_account token missing');
 
-                const res = await fetch('/api/auth/account', {
+                const res = await apiFetch('/api/auth/account', {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     body: JSON.stringify({ confirm: true, password, recaptcha_token })
                 });
                 if (res.ok) {
-                    showMessage(accountMsg, '✓ Account deleted. Redirecting...', 'success');
+                    showMessage(accountMsg, 'âœ“ Account deleted. Redirecting...', 'success');
                     setTimeout(() => window.location.href = '/', 2000);
                 } else {
                     const data = await res.json();

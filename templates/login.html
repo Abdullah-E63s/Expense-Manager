@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -9,7 +9,7 @@
     <meta name="RECAPTCHA_ENABLED" content="{{ recaptcha_enabled | lower }}">
     <meta name="RECAPTCHA_SITE_KEY" content="{{ recaptcha_site_key }}">
 
-    <title>Login • Expense Manager</title>
+    <title>Login â€¢ Expense Manager</title>
     <link rel="icon" type="image/png" href="/static/images/logo.png">
     <!-- CSS Files -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -20,7 +20,7 @@
     <script src="https://www.google.com/recaptcha/enterprise.js?render={{ recaptcha_site_key }}" defer></script>
     {% endif %}
 
-</head>
+    <script src="/static/javascript/config.js"></script></head>
 
 <body>
 
@@ -48,12 +48,12 @@
                 <div class="form-group">
                     <label for="login-password">Password</label>
                     <div class="password-input-container">
-                        <input id="login-password" name="password" type="password" placeholder="••••••••" required
+                        <input id="login-password" name="password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required
                             minlength="10" autocomplete="current-password" class="form-control">
                         <button type="button" class="show-password-btn" data-input-id="login-password"
                             aria-label="Toggle password visibility">
-                            <span class="show-icon">👁️</span>
-                            <span class="hide-icon" style="display:none;">🔒</span>
+                            <span class="show-icon">ðŸ‘ï¸</span>
+                            <span class="hide-icon" style="display:none;">ðŸ”’</span>
                         </button>
                     </div>
                     <div class="invalid-feedback">Password must be at least 10 characters long</div>
