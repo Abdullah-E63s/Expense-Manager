@@ -289,22 +289,25 @@ def handle_400(e):
 def handle_500(e):
     app.logger.error(f"500 Internal Server Error: {e}", exc_info=True)
     if request.path.startswith('/api/'):
-        return jsonify({"success": False, "error": "Internal server error. Check server logs."}), 500
-    return "500 Internal Server Error", 500
+        return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
+    return f"500 Internal Server Error: {str(e)}", 500
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    from flask_wtf.csrf import CSRFError
-    if isinstance(e, CSRFError):
-        app.logger.warning(f"CSRF Error: {e.description}")
-        if request.path.startswith('/api/'):
-            return jsonify({"success": False, "error": f"CSRF validation failed: {e.description}"}), 400
-        return f"CSRF Error: {e.description}", 400
+    try:
+        from flask_wtf.csrf import CSRFError
+        if isinstance(e, CSRFError):
+            app.logger.warning(f"CSRF Error: {e.description}")
+            if request.path.startswith('/api/'):
+                return jsonify({"success": False, "error": f"CSRF validation failed: {e.description}"}), 400
+            return f"CSRF Error: {e.description}", 400
+    except ImportError:
+        pass
         
     app.logger.error(f"Unhandled Exception: {e}", exc_info=True)
     if request.path.startswith('/api/'):
         return jsonify({"success": False, "error": f"Unhandled server error: {str(e)}"}), 500
-    return f"500 Server Error", 500
+    return f"500 Server Error: {str(e)}", 500
 
 @app.route('/')
 def root():
