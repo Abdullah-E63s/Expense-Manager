@@ -2856,8 +2856,9 @@ def yolo_detect():
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"YOLO detect error: {str(e)}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to run detection'}), 500
+        error_msg = str(e)
+        current_app.logger.error(f"YOLO detect error: {error_msg}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Failed to run detection: {error_msg}'}), 500
 @expenses_bp.get("/analytics")
 def get_expense_analytics():
     """Get expense analytics data for charts."""
