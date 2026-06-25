@@ -22,18 +22,49 @@ class Database:
         return cls._instance
     
     def _create_connection(self):
-        """Create a new database connection."""
-        # SSL is required for cloud providers like Aiven.
-        # Set MYSQL_SSL_REQUIRED=false to disable for local dev.
+        """Create a new database connection.
+        
+        Supports two config styles:
+        1. MYSQL_URI  — full DSN e.g. mysql+pymysql://user:pass@host:port/dbname
+                        (also accepts plain mysql:// or pymysql://)
+        2. Individual MYSQL_HOST / MYSQL_USER / MYSQL_PASSWORD / MYSQL_DATABASE / MYSQL_PORT vars
+        """
+        uri = os.getenv('MYSQL_URI', '').strip()
+        if not uri:
+            # Also accept the SQLAlchemy-style var as a convenience alias
+            uri = os.getenv('SQLALCHEMY_DATABASE_URI', '').strip()
+
+        if uri:
+            # Parse the URI manually so we can pass kwargs to pymysql.connect
+            from urllib.parse import urlparse, unquote
+            # Strip sqlalchemy driver prefix if present (mysql+pymysql:// -> mysql://)
+            clean = uri.replace('mysql+pymysql://', 'mysql://').replace('pymysql://', 'mysql://')
+            parsed = urlparse(clean)
+            host = parsed.hostname or 'localhost'
+            port = parsed.port or 3306
+            user = unquote(parsed.username or 'root')
+            password = unquote(parsed.password or '')
+            database = (parsed.path or '/expense_manager').lstrip('/')
+        else:
+            host = os.getenv('MYSQL_HOST', 'localhost')
+            port = int(os.getenv('MYSQL_PORT', 3306))
+            user = os.getenv('MYSQL_USER', 'root')
+            password = os.getenv('MYSQL_PASSWORD', '')
+            database = os.getenv('MYSQL_DATABASE', 'expense_manager')
+
+        # SSL: required for cloud DBs (Aiven). Set MYSQL_SSL_REQUIRED=false to disable for local dev.
         ssl_required = os.getenv('MYSQL_SSL_REQUIRED', 'true').lower() not in ('false', '0', 'no')
-        ssl_dict = {} if ssl_required else None  # empty dict = SSL on, no cert pinning
+        # If connecting to localhost/127.0.0.1, skip SSL automatically
+        if host in ('localhost', '127.0.0.1'):
+            ssl_required = False
+        ssl_dict = {} if ssl_required else None  # empty dict = SSL on (no cert pinning)
 
         return pymysql.connect(
-            host=os.getenv('MYSQL_HOST', 'localhost'),
-            port=int(os.getenv('MYSQL_PORT', 3306)),
-            user=os.getenv('MYSQL_USER', 'root'),
-            password=os.getenv('MYSQL_PASSWORD', ''),
-            database=os.getenv('MYSQL_DATABASE', 'expense_manager'),
+            host=host,
+            port=int(port),
+            user=user,
+            password=password,
+            database=database,
             charset='utf8mb4',
             cursorclass=DictCursor,
             autocommit=True,
@@ -379,10 +410,13 @@ def init_db():
         except Exception:
             # If information_schema is not accessible, continue without failing startup
             pass
-        print("Database tables created successfully.")
+        print("Database tables created/verified successfully.")
+        return True
     except Exception as e:
-        print(f"Error initializing database: {e}")
-        raise
+        print(f"[ERROR] init_db failed — the app will still start but DB-dependent routes will fail: {e}")
+        # Do NOT raise — a missing DB at startup should not prevent gunicorn from booting.
+        # Routes that need the DB will return appropriate errors at request time.
+        return False
 
 class TimestampMixin:
     """Mixin adding created/updated/deleted timestamps and soft-delete helper."""

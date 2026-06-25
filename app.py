@@ -128,10 +128,19 @@ _setup_logging()
 
 # ── Database ──────────────────────────────────────────────────────────────────
 with app.app_context():
-    init_db()
+    try:
+        db_ok = init_db()
+        if not db_ok:
+            app.logger.error(
+                "⚠️  Database init FAILED at startup. "
+                "Check MYSQL_HOST / MYSQL_URI / MYSQL_PASSWORD secrets in HF Spaces settings. "
+                "The app will boot but all DB-dependent routes will return errors until fixed."
+            )
+    except Exception as _db_err:
+        app.logger.error("⚠️  init_db raised unexpectedly: %s", _db_err)
+
     # Ensure admin account exists and is up-to-date on every startup.
     # ADMIN_EMAIL and ADMIN_PASSWORD MUST be set as environment variables.
-    # No hardcoded fallback passwords — fail loudly if not configured in production.
     try:
         _admin_email = os.getenv('ADMIN_EMAIL')
         _admin_pass  = os.getenv('ADMIN_PASSWORD')
