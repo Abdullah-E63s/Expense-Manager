@@ -68,9 +68,9 @@ class Database:
             charset='utf8mb4',
             cursorclass=DictCursor,
             autocommit=True,
-            connect_timeout=30,
-            read_timeout=30,
-            write_timeout=30,
+            connect_timeout=3,
+            read_timeout=3,
+            write_timeout=3,
             ssl=ssl_dict,
         )
         

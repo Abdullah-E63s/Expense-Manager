@@ -251,7 +251,7 @@ def verify_recaptcha(action: str, token: str | None, remote_ip: str | None = Non
                     "siteKey": site_key,
                 }
             }
-            resp = requests.post(url, json=payload, timeout=8)
+            resp = requests.post(url, json=payload, timeout=3)
             data = resp.json() if resp.ok else {}
             token_props = data.get('tokenProperties') or {}
             risk = data.get('riskAnalysis') or {}
@@ -275,7 +275,7 @@ def verify_recaptcha(action: str, token: str | None, remote_ip: str | None = Non
                 'response': token,
                 'remoteip': (remote_ip or '')
             },
-            timeout=8
+            timeout=3
         )
         data = resp.json() if resp.ok else {}
         success = bool(data.get('success'))
