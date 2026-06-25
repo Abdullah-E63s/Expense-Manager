@@ -166,8 +166,8 @@ def get_db():
 
 def execute_query(query, params=None, fetch_one=False, fetch_all=False, commit=False):
     """Execute a SQL query and return the results with retry logic."""
-    max_retries = 3
-    retry_delay = 1  # seconds
+    max_retries = 1  # Disabled retries to prevent Vercel 10s timeout
+    retry_delay = 0
     last_exception = None
     connection = None
     
