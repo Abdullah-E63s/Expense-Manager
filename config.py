@@ -46,7 +46,7 @@ class Config:
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
     MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").lower() == "true"
-    MAIL_TIMEOUT = 10  # Fail quickly instead of hanging and causing 502 Gateway Timeouts
+    MAIL_TIMEOUT = 3  # Extremely short timeout to prevent Vercel 10s proxy timeouts
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "exp2tester@gmail.com")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
