@@ -1076,8 +1076,9 @@ def api_login():
         session.permanent = True
         return jsonify({'success': True, 'redirect': '/dashboard', 'user': {'id': user.id, 'email': user.email}}), 200
     except Exception as e:
-        current_app.logger.error(f"Login error: {e}", exc_info=True)
-        return jsonify({'error': 'An error occurred during login. Please try again.'}), 500
+        error_msg = str(e)
+        current_app.logger.error(f"Login error: {error_msg}", exc_info=True)
+        return jsonify({'error': f'An error occurred during login: {error_msg}'}), 500
 
 
 @auth_bp.route("/google", methods=["POST", "OPTIONS"])
@@ -1258,11 +1259,12 @@ def google_sign_in():
         }), 401
             
     except Exception as e:
-        current_app.logger.error(f"Error during Firebase auth: {e}", exc_info=True)
+        error_msg = str(e)
+        current_app.logger.error(f"Error during Firebase auth: {error_msg}", exc_info=True)
         return jsonify({
             'success': False,
             'error_type': 'ServerError',
-            'message': 'An unexpected error occurred during authentication'
+            'message': f'An unexpected error occurred: {error_msg}'
         }), 500
         
 @auth_bp.route("/set-password", methods=["GET", "POST"])
