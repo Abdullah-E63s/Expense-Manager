@@ -2721,7 +2721,7 @@ def yolo_detect():
         if not model:
             return jsonify({
                 'success': False,
-                'error': 'YOLOv9 model not available', 
+                'error': f'YOLOv9 model not available: {YOLOV9_LAST_ERROR}', 
                 'details': YOLOV9_LAST_ERROR
             }), 500
 
