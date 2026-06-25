@@ -859,10 +859,18 @@ def _get_yolov9_model():
         # Optimize for CPU inference
         if YOLOV9_MODEL is not None:
             try:
+                # Ensure it's wrapped in AutoShape so it accepts PIL images and `size=`
+                if type(YOLOV9_MODEL).__name__ != 'AutoShape':
+                    current_app.logger.info("YOLOV9: Wrapping model in AutoShape manually (DetectMultiBackend fallback occurred).")
+                    if yolov9_dir not in sys.path:
+                        sys.path.insert(0, yolov9_dir)
+                    from models.common import AutoShape  # type: ignore
+                    YOLOV9_MODEL = AutoShape(YOLOV9_MODEL)
+                
                 YOLOV9_MODEL.eval()
                 torch.set_num_threads(2)  # Limit CPU threads to reduce RAM spikes
-            except Exception:
-                pass
+            except Exception as e:
+                current_app.logger.warning(f"YOLOV9: Failed to wrap in AutoShape or optimize: {e}")
         return YOLOV9_MODEL
     except Exception as e:
         import traceback
