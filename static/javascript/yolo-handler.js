@@ -539,8 +539,9 @@
                 }
               } else {
                 // Handle server errors (e.g. 500)
-                console.warn(`Backend returned ${res.status} for ${file.name}`);
-                showYoloToast(`Server error processing ${file.name} (${res.status}). Please try again.`, 'warn', 4000);
+                const errorMsg = data.error || 'Unknown error';
+                console.warn(`Backend returned ${res.status} for ${file.name}: ${errorMsg}`);
+                showYoloToast(`Server error processing ${file.name} (${res.status}): ${errorMsg}`, 'warn', 6000);
               }
             } catch (backendErr) {
               console.warn("Backend processing failed:", backendErr);
