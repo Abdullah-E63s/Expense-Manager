@@ -667,7 +667,7 @@ def _get_yolov9_model():
         import types
 
         YOLOV9_LAST_ERROR = None
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        base_dir = os.path.dirname(os.path.abspath(__file__))
         
         # 1. Primary Source: Environment Variable
         raw_weights = os.getenv("YOLOV9_WEIGHTS")
