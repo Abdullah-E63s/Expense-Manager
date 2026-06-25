@@ -20,6 +20,13 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
+# Detect which Gemini SDK is available (prefer new google.genai over deprecated google.generativeai)
+try:
+    import google.genai as _genai_new  # noqa: F401
+    _USE_NEW_SDK = True
+except ImportError:
+    _USE_NEW_SDK = False
+
 # --- Gemini configuration ---
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -55,7 +62,7 @@ IMPORTANT RULES:
 4. If an item name has a trailing tax letter (T, F, X), strip it.
 5. If the receipt has items and prices on separate lines, intelligently match them.
 6. YOU MUST properly escape all inner quotes in strings.
-7. CRITICAL: Provide extreme scrutiny on whether the image is actually a receipt/invoice. If the image is a school schedule, a timetable, a random text document, a photo of a person, or anything that lacks explicit financial layout AND currency/total markers, you MUST set "receipt_context" to "not_a_receipt" and return an empty "items" array.
+7. Only set "receipt_context" to "not_a_receipt" if the image is CLEARLY not a financial document (e.g. a selfie, a landscape photo, a blank page). If the image contains ANY text resembling prices, item names, totals, or a list of goods/services — even if partially visible, rotated, or low quality — treat it as a receipt and extract what you can. When in doubt, attempt extraction rather than rejecting.
 """
 
 _EMPTY_RESULT = {
@@ -75,7 +82,11 @@ class GodModeOCR:
         self._configured = False
 
     def _get_model(self):
-        """Lazy-initialize the Gemini model on first call."""
+        """Lazy-initialize the Gemini model on first call.
+        
+        Prefers the new google.genai SDK; falls back to the deprecated
+        google.generativeai if the new package is not installed.
+        """
         if self._model is not None:
             return self._model
 
@@ -83,32 +94,47 @@ class GodModeOCR:
             logger.error("GEMINI_API_KEY is not set — OCR will fail.")
             return None
 
-        try:
-            import google.generativeai as genai
-            from google.generativeai.types import HarmCategory, HarmBlockThreshold
+        if _USE_NEW_SDK:
+            # ── New google.genai SDK ──────────────────────────────────────────
+            try:
+                import google.genai as genai
+                from google.genai import types as genai_types
 
-            if not self._configured:
-                genai.configure(api_key=GEMINI_API_KEY)
-                self._configured = True
+                self._client = genai.Client(api_key=GEMINI_API_KEY)
+                self._genai_types = genai_types
+                # Store sentinel so extract_structured_data knows which path to use
+                self._model = "NEW_SDK"
+                logger.info("Gemini 2.5 Flash model initialized (google.genai SDK).")
+            except Exception as e:
+                logger.error("Failed to initialize google.genai model: %s", e)
+        else:
+            # ── Legacy google.generativeai SDK ────────────────────────────────
+            try:
+                import google.generativeai as genai  # type: ignore
+                from google.generativeai.types import HarmCategory, HarmBlockThreshold  # type: ignore
 
-            safety_settings = {
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            }
+                if not self._configured:
+                    genai.configure(api_key=GEMINI_API_KEY)
+                    self._configured = True
 
-            self._model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash",
-                generation_config=GENERATION_CONFIG,
-                safety_settings=safety_settings,
-                system_instruction=SYSTEM_INSTRUCTION,
-            )
-            logger.info("Gemini 2.5 Flash model initialized.")
-        except ImportError:
-            logger.error("google-generativeai package not installed.")
-        except Exception as e:
-            logger.error("Failed to initialize Gemini model: %s", e)
+                safety_settings = {
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                }
+
+                self._model = genai.GenerativeModel(
+                    model_name="gemini-2.5-flash",
+                    generation_config=GENERATION_CONFIG,
+                    safety_settings=safety_settings,
+                    system_instruction=SYSTEM_INSTRUCTION,
+                )
+                logger.info("Gemini 2.5 Flash model initialized (google.generativeai legacy SDK).")
+            except ImportError:
+                logger.error("Neither google.genai nor google-generativeai package is installed.")
+            except Exception as e:
+                logger.error("Failed to initialize Gemini model: %s", e)
 
         return self._model
 
@@ -124,6 +150,7 @@ class GodModeOCR:
         # Lazy import heavy libs — only needed during actual OCR call
         import cv2
         from PIL import Image
+        import io as _io
 
         start = time.time()
 
@@ -131,7 +158,14 @@ class GodModeOCR:
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
         pil_img = Image.fromarray(img_rgb)
 
-        # Resize: cap longest side at 1600px to reduce bandwidth/latency
+        # Upscale tiny images so Gemini can read text (min 200px on shortest side)
+        min_dim = min(pil_img.size)
+        if min_dim < 200:
+            scale = 200 / min_dim
+            new_size = (int(pil_img.size[0] * scale), int(pil_img.size[1] * scale))
+            pil_img = pil_img.resize(new_size, Image.Resampling.LANCZOS)
+
+        # Cap longest side at 1600px to reduce bandwidth/latency
         max_dim = max(pil_img.size)
         if max_dim > 1600:
             scale = 1600 / max_dim
@@ -140,15 +174,44 @@ class GodModeOCR:
 
         logger.info("Sending %dx%d image to Gemini Vision...", pil_img.width, pil_img.height)
 
-        try:
-            response = model.generate_content(
-                ["Extract the receipt data into the requested JSON format.", pil_img]
-            )
+        prompt = "Extract the receipt data into the requested JSON format. System: " + SYSTEM_INSTRUCTION
 
-            json_text = response.text.strip()
+        try:
+            if _USE_NEW_SDK and model == "NEW_SDK":
+                # ── New google.genai SDK path ─────────────────────────────────
+                # Convert PIL image to bytes for upload
+                buf = _io.BytesIO()
+                pil_img.save(buf, format='JPEG', quality=90)
+                img_bytes = buf.getvalue()
+
+                genai_types = self._genai_types
+                response = self._client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=[
+                        genai_types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
+                        genai_types.Part.from_text(text="Extract the receipt data into the requested JSON format."),
+                    ],
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        response_mime_type="application/json",
+                        temperature=0.0,
+                    ),
+                )
+                json_text = response.text.strip() if response.text else ""
+            else:
+                # ── Legacy google.generativeai SDK path ───────────────────────
+                response = model.generate_content(
+                    ["Extract the receipt data into the requested JSON format.", pil_img]
+                )
+                json_text = response.text.strip() if response.text else ""
+
             # Strip markdown code fences if present
             json_text = re.sub(r'^```(?:json)?\s*', '', json_text)
             json_text = re.sub(r'\s*```$', '', json_text).strip()
+
+            if not json_text:
+                logger.warning("Gemini returned empty response — returning empty result.")
+                return dict(_EMPTY_RESULT)
 
             try:
                 data = json.loads(json_text)

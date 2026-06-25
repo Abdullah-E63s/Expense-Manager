@@ -489,11 +489,16 @@
 
                 if (data.success) {
                   const receiptContext = data.receipt_context || '';
+                  const hasYoloDetections = data.detections && data.detections.length > 0;
 
-                  if (receiptContext === 'not_a_receipt' || (data.items && data.items.length === 0 && (!data.detections || data.detections.length === 0))) {
-                    console.log(`[DEBUG] Backend identified ${file.name} as a non-receipt.`);
+                  // Only reject as non-receipt if BOTH:
+                  //   1. Gemini said not_a_receipt
+                  //   2. YOLO also found no receipt detections
+                  // If YOLO found a receipt, trust it and try to process.
+                  if (receiptContext === 'not_a_receipt' && !hasYoloDetections) {
+                    console.log(`[DEBUG] Backend identified ${file.name} as a non-receipt (no YOLO detections either).`);
                     noItemFiles.push(file.name || `Image ${i + 1}`);
-                    showYoloToast(`Image (${file.name}) is not a receipt please add receipts only`, 'warn', 4500);
+                    showYoloToast(`Image (${file.name}) is not a receipt — please add receipts only`, 'warn', 4500);
                     continue; // Skip further processing for this file
                   }
 
@@ -516,18 +521,26 @@
                     }
 
                     backendSuccess = true;
-                  } else if (data.detections && data.detections.length > 0) {
-                    // Fallback to YOLO detections if OCR failed
+                  } else if (hasYoloDetections) {
+                    // YOLO found a receipt but OCR couldn't read text clearly
+                    if (receiptContext === 'not_a_receipt') {
+                      showYoloToast(`Receipt detected in ${file.name} but text couldn't be read clearly. Try a clearer photo or better lighting.`, 'warn', 5000);
+                    }
+                    // Fallback to YOLO detections so the user can at least manually fill amounts
                     data.detections.forEach(det => {
                       backendItems.push({
-                        name: det.label || 'Item',
+                        name: det.label || 'Receipt Item',
                         price: 0,
-                        category: det.label || 'Misc'
+                        category: 'Misc'
                       });
                     });
                     backendSuccess = true;
                   }
                 }
+              } else {
+                // Handle server errors (e.g. 500)
+                console.warn(`Backend returned ${res.status} for ${file.name}`);
+                showYoloToast(`Server error processing ${file.name} (${res.status}). Please try again.`, 'warn', 4000);
               }
             } catch (backendErr) {
               console.warn("Backend processing failed:", backendErr);
