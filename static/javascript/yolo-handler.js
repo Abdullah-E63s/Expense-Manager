@@ -539,7 +539,11 @@
                 }
               } else {
                 // Handle server errors (e.g. 500)
-                const errorMsg = data.error || 'Unknown error';
+                let errorMsg = 'Unknown error';
+                try {
+                  const errorData = await res.json();
+                  errorMsg = errorData.error || errorMsg;
+                } catch (e) {}
                 console.warn(`Backend returned ${res.status} for ${file.name}: ${errorMsg}`);
                 showYoloToast(`Server error processing ${file.name} (${res.status}): ${errorMsg}`, 'warn', 6000);
               }
