@@ -278,6 +278,34 @@ def add_security_headers(response):
 
 
 # ── Core routes ───────────────────────────────────────────────────────────────
+@app.errorhandler(400)
+def handle_400(e):
+    app.logger.warning(f"400 Bad Request: {e.description}")
+    if request.path.startswith('/api/'):
+        return jsonify({"success": False, "error": str(e.description)}), 400
+    return "400 Bad Request", 400
+
+@app.errorhandler(500)
+def handle_500(e):
+    app.logger.error(f"500 Internal Server Error: {e}", exc_info=True)
+    if request.path.startswith('/api/'):
+        return jsonify({"success": False, "error": "Internal server error. Check server logs."}), 500
+    return "500 Internal Server Error", 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    from flask_wtf.csrf import CSRFError
+    if isinstance(e, CSRFError):
+        app.logger.warning(f"CSRF Error: {e.description}")
+        if request.path.startswith('/api/'):
+            return jsonify({"success": False, "error": f"CSRF validation failed: {e.description}"}), 400
+        return f"CSRF Error: {e.description}", 400
+        
+    app.logger.error(f"Unhandled Exception: {e}", exc_info=True)
+    if request.path.startswith('/api/'):
+        return jsonify({"success": False, "error": f"Unhandled server error: {str(e)}"}), 500
+    return f"500 Server Error", 500
+
 @app.route('/')
 def root():
     """Redirect root to dashboard or login."""
