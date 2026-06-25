@@ -36,12 +36,31 @@ app.config.update(
 )
 
 # ── Extensions ────────────────────────────────────────────────────────────────
-# Read allowed origins from env var (comma-separated) so production Vercel URL is included
-_raw_origins = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5000,http://127.0.0.1:5000,http://localhost:3000,http://127.0.0.1:3000",
-)
-_allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+# Build the allowed origins list from env vars, auto-detecting HF Spaces URL.
+# ALLOWED_ORIGINS can be set to a comma-separated list to explicitly restrict origins.
+# When not set, we allow localhost (dev) + the detected production URL automatically.
+def _build_allowed_origins() -> list:
+    raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+    if raw:
+        return [o.strip() for o in raw.split(",") if o.strip()]
+
+    origins = [
+        "http://localhost:5000",
+        "http://127.0.0.1:5000",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    # Auto-add the Hugging Face Space URL if running on HF
+    hf_host = os.getenv("SPACE_HOST", "").strip()
+    if hf_host:
+        origins.append(f"https://{hf_host.rstrip('/')}")
+    # Also add whatever EXTERNAL_BASE_URL is set to
+    ext_url = os.getenv("EXTERNAL_BASE_URL", "").strip()
+    if ext_url and ext_url not in origins:
+        origins.append(ext_url.rstrip("/"))
+    return origins
+
+_allowed_origins = _build_allowed_origins()
 
 CORS(app,
      resources={

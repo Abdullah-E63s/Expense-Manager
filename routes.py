@@ -1081,7 +1081,7 @@ def api_login():
 
 
 @auth_bp.route("/google", methods=["POST", "OPTIONS"])
-@cross_origin(origins=['http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:3000'], 
+@cross_origin(origins='*', 
              methods=['POST', 'OPTIONS'],
              allow_headers=['Content-Type', 'X-CSRFToken', 'Authorization', 'X-Requested-With'],
              expose_headers=['Content-Type'],
@@ -1329,7 +1329,7 @@ def set_password():
         return jsonify({"error": "Failed to set password. Please try again."}), 500
 
 @auth_bp.post("/signup")
-@cross_origin(origins=["http://localhost:5000", "http://127.0.0.1:5000", "http://localhost:3000", "http://127.0.0.1:3000"], 
+@cross_origin(origins='*', 
              supports_credentials=True,
              allow_headers=["Content-Type", "X-CSRFToken", "Authorization"])
 def signup():
@@ -1596,7 +1596,7 @@ def resend_code():
 
 
 @auth_bp.route("/login", methods=["POST", "OPTIONS"])
-@cross_origin(origins=["http://localhost:5000", "http://127.0.0.1:5000", "http://localhost:3000", "http://127.0.0.1:3000"], 
+@cross_origin(origins='*', 
              supports_credentials=True,
              allow_headers=["Content-Type", "X-CSRFToken", "Authorization"],
              methods=["POST"])

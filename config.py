@@ -7,11 +7,35 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _detect_base_url() -> str:
+    """
+    Auto-detect the public base URL for this deployment.
+
+    Priority:
+    1. EXTERNAL_BASE_URL env var (explicit override — always wins)
+    2. SPACE_HOST env var injected by Hugging Face Spaces
+       (format: "username-spacename.hf.space" — no scheme)
+    3. Fallback to http://localhost:5000 for local dev
+    """
+    explicit = os.getenv("EXTERNAL_BASE_URL", "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+
+    # Hugging Face Spaces injects SPACE_HOST automatically
+    hf_host = os.getenv("SPACE_HOST", "").strip()
+    if hf_host:
+        return f"https://{hf_host.rstrip('/')}"
+
+    return "http://localhost:5000"
+
+
+_BASE_URL = _detect_base_url()
+
+
 class Config:
     """Base configuration shared by all environments."""
 
     # Secret key — MUST be set as an environment variable in production.
-    # Never use a hardcoded fallback in production; leave empty to force explicit configuration.
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-insecure-key-change-me"
     EMAIL_TOKEN_SALT = os.environ.get("EMAIL_TOKEN_SALT", "email-confirm-salt")
 
@@ -23,7 +47,7 @@ class Config:
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
     MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "false").lower() == "true"
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME", "exp2tester@gmail.com")
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")  # Must be set in .env
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD", "")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
 
     # -------------------------
@@ -38,6 +62,9 @@ class Config:
     # Sessions
     # -------------------------
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    # Leave SESSION_COOKIE_DOMAIN as None — Flask will use the current request domain.
+    # A hardcoded 'localhost:5000' would break every production deployment.
+    SESSION_COOKIE_DOMAIN = None
 
     # -------------------------
     # File uploads
@@ -56,8 +83,10 @@ class Config:
     # -------------------------
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+    # Default derives from _BASE_URL so it works on HF Spaces without manual config.
     GOOGLE_REDIRECT_URI = os.environ.get(
-        "GOOGLE_REDIRECT_URI", "http://localhost:5000/api/auth/google/callback"
+        "GOOGLE_REDIRECT_URI",
+        f"{_BASE_URL}/api/auth/google/callback"
     )
 
     # -------------------------
@@ -89,13 +118,12 @@ class Config:
     # -------------------------
     # CDN & External URL
     # -------------------------
-    # Set STATIC_CDN_URL to your Vercel deployment URL (e.g. https://my-app.vercel.app)
-    # to offload static asset delivery from Flask to the Vercel CDN.
     STATIC_CDN_URL = os.getenv("STATIC_CDN_URL", "")
 
     # Base URL used for building absolute links in emails and OAuth callbacks.
-    # e.g. https://your-app.hf.space  (no trailing slash)
-    EXTERNAL_BASE_URL = os.getenv("EXTERNAL_BASE_URL", "http://localhost:5000")
+    # Auto-detected from SPACE_HOST on Hugging Face Spaces.
+    # Override with EXTERNAL_BASE_URL env var if needed.
+    EXTERNAL_BASE_URL = _BASE_URL
 
 
 class DevelopmentConfig(Config):
