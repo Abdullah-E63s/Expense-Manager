@@ -1,43 +1,30 @@
-from flask import Flask, request, jsonify, render_template
-from flask_sqlalchemy import SQLAlchemy
+import sys
+import argparse
+from app import app
+from models import User
 
-app = Flask(__name__)
-
-# Assuming DB is already configured in your main config file
-db = SQLAlchemy(app)
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    is_deleted = db.Column(db.Boolean, default=False)
-    deleted_at = db.Column(db.DateTime, nullable=True)
-
-@app.route('/')
-def index():
-    return render_template('restore.html')
-
-@app.route('/api/restore', methods=['POST'])
-def restore_user():
-    data = request.get_json()
-    email = data.get('email')
-
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
-
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    if not user.is_deleted:
-        return jsonify({"message": "User is already active"}), 200
-
-    user.is_deleted = False
-    user.deleted_at = None
-    db.session.commit()
-
-    return jsonify({"message": f"✅ Account for {email} has been successfully restored."}), 200
-
+def restore_user(email):
+    """Restore a soft-deleted user by their email address."""
+    with app.app_context():
+        user = User.get_by_email_any(email)
+        if not user:
+            print(f"❌ Error: No user found with email '{email}'")
+            sys.exit(1)
+        
+        if user.is_active and not user.deleted_at:
+            print(f"ℹ️ User '{email}' is already active and not deleted.")
+            sys.exit(0)
+            
+        try:
+            user.restore()
+            print(f"✅ Account for '{email}' has been successfully restored.")
+        except Exception as e:
+            print(f"❌ Error restoring user '{email}': {str(e)}")
+            sys.exit(1)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    parser = argparse.ArgumentParser(description="Restore a soft-deleted user account.")
+    parser.add_argument("email", help="The email address of the user to restore.")
+    args = parser.parse_args()
+    
+    restore_user(args.email)
