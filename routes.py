@@ -432,155 +432,78 @@ def verify_email_token(token: str, max_age: int = 3600) -> str | None:
 
 
 def send_verification_email(email: str, verification_code: str) -> None:
-    """Send verification email to user using Flask-Mail with improved error handling."""
-    try:
-        from flask_mail import Message, Mail
-        
-        # Check if mail server is configured
-        mail_server = current_app.config.get('MAIL_SERVER')
-        if not mail_server:
-            msg = f"Mail server not configured. Verification code for {email}: {verification_code}"
-            current_app.logger.warning(msg)
-            print(f"\n[DEBUG] {msg}")
-            return
-            
-        # Get mail configuration
-        mail_username = current_app.config.get('MAIL_USERNAME')
-        mail_password = current_app.config.get('MAIL_PASSWORD')
-        
-        if not all([mail_username, mail_password]):
-            msg = f"Mail credentials not properly configured. Check MAIL_USERNAME and MAIL_PASSWORD"
-            current_app.logger.error(msg)
-            print(f"\n[ERROR] {msg}")
-            return
-            
-        # Initialize mail if not already done
-        mail = current_app.extensions.get('mail')
-        if not mail:
-            try:
-                # Explicitly configure mail with current app config
-                mail = Mail()
-                mail.init_app(current_app)
-                current_app.extensions['mail'] = mail
-                current_app.logger.info('Flask-Mail re-initialized.')
-            except Exception as init_err:
-                error_msg = f"Failed to initialize Flask-Mail: {str(init_err)}"
-                current_app.logger.error(error_msg, exc_info=True)
-                print(f"\n[ERROR] {error_msg}")
-                mail = None
+    """Send verification email using direct smtplib with a hard timeout."""
+    import smtplib
+    import ssl
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
 
-        if mail:
-            subject = "Verify your email for Expense Manager"
-            print(f"\n[DEBUG] Sending email to: {email}")
-            print(f"[DEBUG] Using SMTP: {mail_server}:{current_app.config.get('MAIL_PORT')}")
-            
-            # Generate verification link
-            try:
-                with current_app.app_context():
-                    verification_link = url_for('auth.verify_email_link', 
-                                             token=generate_email_token(email), 
-                                             _external=True)
-            except Exception as e:
-                current_app.logger.warning(f"Couldn't generate verification URL: {str(e)}")
-                base = current_app.config.get('EXTERNAL_BASE_URL', 'http://localhost:5000')
-                verification_link = f"{base}/api/auth/verify-email/{generate_email_token(email)}"
+    mail_server = current_app.config.get('MAIL_SERVER', 'smtp.gmail.com')
+    mail_port = int(current_app.config.get('MAIL_PORT', 587))
+    mail_username = current_app.config.get('MAIL_USERNAME', '')
+    mail_password = current_app.config.get('MAIL_PASSWORD', '')
+    mail_sender = current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
 
-            # Text version of the email
-            text_body = f"""Hello,
+    if not mail_username or not mail_password:
+        current_app.logger.error("MAIL_USERNAME or MAIL_PASSWORD not set. Cannot send email.")
+        print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
+        return
 
-Your verification code is: {verification_code}
-
-This code will expire in 60 seconds.
-
-If you didn't ask to verify this address, you can ignore this email.
-
-Thanks,
-Expense Manager Team
-"""
-
-            # HTML version of the email
-            html_body = f"""
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
-                <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
-                    <h2 style="margin: 0; color: #2c3e50;">Email Verification</h2>
-                </div>
-                
-                <div style="padding: 30px 20px;">
-                    <p>Hello,</p>
-                    <p>Please use the following verification code to complete your registration:</p>
-                    
-                    <div style="background-color: #f3f4f6; padding: 25px; text-align: center; margin: 30px 0; border-radius: 8px; border: 1px dashed #d1d5db;">
-                        <h1 style="color: #3b82f6; font-family: monospace; font-size: 32px; margin: 0; letter-spacing: 4px;">
-                            {verification_code}
-                        </h1>
-                    </div>
-                    
-                    <p style="color: #6c757d; font-size: 14px; text-align: center;">
-                        This code will expire in 60 seconds.
-                    </p>
-                </div>
-                
-                <div style="background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef;">
-                    <p style="margin: 0;">If you didn't request this, please ignore this email.</p>
-                    <p style="margin: 10px 0 0 0;">&copy; {datetime.now().year} Expense Manager. All rights reserved.</p>
-                </div>
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
+            <h2 style="margin: 0; color: #2c3e50;">Email Verification</h2>
+        </div>
+        <div style="padding: 30px 20px;">
+            <p>Hello,</p>
+            <p>Please use the following verification code to complete your registration:</p>
+            <div style="background-color: #f3f4f6; padding: 25px; text-align: center; margin: 30px 0; border-radius: 8px; border: 1px dashed #d1d5db;">
+                <h1 style="color: #3b82f6; font-family: monospace; font-size: 32px; margin: 0; letter-spacing: 4px;">{verification_code}</h1>
             </div>
-            """
+            <p style="color: #6c757d; font-size: 14px; text-align: center;">This code will expire in 5 minutes.</p>
+        </div>
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; border-top: 1px solid #e9ecef;">
+            <p style="margin: 0;">If you didn't request this, please ignore this email.</p>
+        </div>
+    </div>"""
 
-            try:
-                # Create message with explicit sender
-                sender = current_app.config.get('MAIL_DEFAULT_SENDER', 'noreply@expensemanager.com')
-                if isinstance(sender, tuple):
-                    sender = f"{sender[0]} <{sender[1]}>"
-                
-                msg = Message(
-                    subject=subject,
-                    recipients=[email],
-                    body=text_body,
-                    html=html_body,
-                    sender=sender,
-                    reply_to=current_app.config.get('MAIL_DEFAULT_SENDER')
-                )
-                
-                # Get mail extension
-                mail_ext = current_app.extensions.get('mail')
-                if not mail_ext:
-                    raise RuntimeError("Mail extension not initialized")
-                
-                # Send email with timeout
-                with current_app.app_context():
-                    mail_ext.send(msg)
-                
-                success_msg = f"Successfully sent verification email to {email}"
-                current_app.logger.info(success_msg)
-                print(f"\n[SUCCESS] {success_msg}")
-                
-            except Exception as send_err:
-                error_msg = f"Failed to send email to {email}: {str(send_err)}"
-                current_app.logger.error(error_msg, exc_info=True)
-                print(f"\n[ERROR] {error_msg}")
-                print(f"[DEBUG] Mail config: server={mail_server}, user={mail_username}, tls={current_app.config.get('MAIL_USE_TLS')}")
-                
-                # Fallback to console logging the verification code
-                fallback_msg = f"Verification code for {email}: {verification_code}"
-                print(f"\n[FALLBACK] {fallback_msg}")
-                current_app.logger.info(fallback_msg)
-                
-        else:
-            # Fallback to console logging if mail not configured
-            fallback_msg = f"Mail not configured. Verification code for {email}: {verification_code}"
-            print(f"\n[WARNING] {fallback_msg}")
-            current_app.logger.warning(fallback_msg)
-            
+    text_body = f"Your verification code is: {verification_code}\n\nThis code will expire in 5 minutes."
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'Verify your email for Expense Manager'
+    msg['From'] = mail_sender if isinstance(mail_sender, str) else f"{mail_sender[0]} <{mail_sender[1]}>"
+    msg['To'] = email
+    msg.attach(MIMEText(text_body, 'plain'))
+    msg.attach(MIMEText(html_body, 'html'))
+
+    try:
+        current_app.logger.info(f"Sending email to {email} via {mail_server}:{mail_port}")
+        print(f"\n[DEBUG] Sending email to: {email}")
+        print(f"[DEBUG] Using SMTP: {mail_server}:{mail_port}")
+
+        # Hard 8-second timeout — well within Gunicorn's 30s worker limit
+        with smtplib.SMTP(mail_server, mail_port, timeout=8) as server:
+            server.ehlo()
+            server.starttls(context=ssl.create_default_context())
+            server.ehlo()
+            server.login(mail_username, mail_password)
+            server.sendmail(mail_username, [email], msg.as_string())
+
+        current_app.logger.info(f"Successfully sent verification email to {email}")
+        print(f"\n[SUCCESS] Email sent to {email}")
+
+    except smtplib.SMTPAuthenticationError as e:
+        current_app.logger.error(f"SMTP auth failed: {e}")
+        print(f"\n[ERROR] SMTP Authentication failed — check MAIL_USERNAME and MAIL_PASSWORD")
+        raise
+
     except Exception as e:
-        error_msg = f"Unexpected error in send_verification_email: {str(e)}"
-        current_app.logger.error(error_msg, exc_info=True)
-        print(f"\n[CRITICAL] {error_msg}")
-        
-        # Fallback to console logging
-        fallback_msg = f"Verification code for {email}: {verification_code}"
-        print(f"\n[FALLBACK] {fallback_msg}")
-        current_app.logger.info(fallback_msg)
+        current_app.logger.error(f"Failed to send email to {email}: {e}", exc_info=True)
+        print(f"\n[ERROR] Email send failed: {e}")
+        print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
+        raise
+
+
 
 
 def allowed_image(filename: str) -> bool:

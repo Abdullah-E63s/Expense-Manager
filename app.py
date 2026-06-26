@@ -75,6 +75,16 @@ CORS(app,
 csrf = CSRFProtect(app)
 mail = Mail(app)
 
+# Exempt all /api/* routes from CSRF — they are JSON APIs called cross-origin
+# from Vercel (expense-manager-ubm8.vercel.app) where cookie-based CSRF tokens
+# cannot be shared. CORS headers guard these endpoints instead.
+@csrf.exempt
+def _api_csrf_exempt(view):
+    return view
+
+# Apply exemption to all API blueprints after they are registered
+# (done below after blueprint registration via csrf.exempt on the blueprint itself)
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 def _setup_logging():
     """Configure logging for production.
@@ -182,6 +192,11 @@ app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(expenses_bp, url_prefix='/api/expenses')
 app.register_blueprint(admin_bp)
 
+# Exempt JSON API blueprints from CSRF — they are called cross-origin from Vercel
+# where the session cookie (and thus CSRF token) is on a different domain.
+csrf.exempt(auth_bp)
+csrf.exempt(expenses_bp)
+
 # ── Template context processors ───────────────────────────────────────────────
 @app.context_processor
 def inject_csrf_token():
@@ -265,7 +280,9 @@ def add_security_headers(response):
         response.cache_control.no_store = True
         response.cache_control.no_cache = True
 
-    origin = request.headers.get('Origin')
+    # Strip newlines from Origin to prevent ValueError in flask-cors
+    raw_origin = request.headers.get('Origin', '')
+    origin = raw_origin.replace('\n', '').replace('\r', '').strip() if raw_origin else ''
     if origin:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Vary'] = 'Origin'
@@ -278,6 +295,12 @@ def add_security_headers(response):
 
 
 # ── Core routes ───────────────────────────────────────────────────────────────
+@app.errorhandler(404)
+def handle_404(e):
+    if request.path.startswith('/api/'):
+        return jsonify({"success": False, "error": "Not found"}), 404
+    return "", 404
+
 @app.errorhandler(400)
 def handle_400(e):
     app.logger.warning(f"400 Bad Request: {e.description}")
