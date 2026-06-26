@@ -432,22 +432,11 @@ def verify_email_token(token: str, max_age: int = 3600) -> str | None:
 
 
 def send_verification_email(email: str, verification_code: str) -> None:
-    """Send verification email.
+    """Send verification email using Resend SDK."""
+    import resend
     
-    Primary: Resend HTTP API (works even when HF blocks SMTP ports).
-    Fallback: Gmail SMTP with 8-second timeout.
-    """
-    import requests as _requests
-    import smtplib, ssl
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-
-    mail_username = current_app.config.get('MAIL_USERNAME', '')
-    mail_password = current_app.config.get('MAIL_PASSWORD', '')
-    mail_server   = current_app.config.get('MAIL_SERVER', 'smtp.gmail.com')
-    mail_port     = int(current_app.config.get('MAIL_PORT', 587))
-    mail_sender   = current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
-    resend_api_key = os.getenv('RESEND_API_KEY', '')
+    # Use provided API key or fallback to environment variable
+    resend.api_key = os.getenv('RESEND_API_KEY', "re_SpYUGXSy_q6M4uAgp4eJZ9xCQaRwdiFWR")
 
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
@@ -468,63 +457,26 @@ def send_verification_email(email: str, verification_code: str) -> None:
     </div>"""
     text_body = f"Your verification code is: {verification_code}\n\nThis code will expire in 5 minutes."
 
-    # ── Method 1: Resend HTTP API (bypasses SMTP port blocking) ──────────────
-    if resend_api_key:
-        try:
-            from_addr = mail_sender if isinstance(mail_sender, str) else f"{mail_sender[0]} <{mail_sender[1]}>"
-            # Resend requires a verified domain; use their onboarding address for testing
-            # Replace with your domain once verified: e.g. "Expense Manager <noreply@yourdomain.com>"
-            resp = _requests.post(
-                'https://api.resend.com/emails',
-                headers={
-                    'Authorization': f'Bearer {resend_api_key}',
-                    'Content-Type': 'application/json',
-                },
-                json={
-                    'from': 'Expense Manager <onboarding@resend.dev>',
-                    'to': [email],
-                    'subject': 'Verify your email for Expense Manager',
-                    'html': html_body,
-                    'text': text_body,
-                },
-                timeout=8
-            )
-            if resp.status_code in (200, 201):
-                current_app.logger.info(f"[Resend] Email sent to {email}")
-                print(f"\n[SUCCESS][Resend] Email sent to {email}")
-                return
-            else:
-                current_app.logger.warning(f"[Resend] Failed ({resp.status_code}): {resp.text} — falling back to SMTP")
-                print(f"\n[WARN][Resend] {resp.status_code}: {resp.text}")
-        except Exception as resend_err:
-            current_app.logger.warning(f"[Resend] Error: {resend_err} — falling back to SMTP")
-            print(f"\n[WARN][Resend] {resend_err}")
-
-    # ── Method 2: Gmail SMTP with hard timeout ────────────────────────────────
-    if not mail_username or not mail_password:
-        current_app.logger.error("No email credentials set (MAIL_USERNAME/MAIL_PASSWORD or RESEND_API_KEY).")
+    try:
+        current_app.logger.info(f"[Resend] Sending verification email to {email}")
+        print(f"\n[DEBUG] Sending email to: {email} via Resend SDK")
+        
+        r = resend.Emails.send({
+            "from": "Expense Manager <onboarding@resend.dev>",
+            "to": email,
+            "subject": "Verify your email for Expense Manager",
+            "html": html_body,
+            "text": text_body
+        })
+        
+        current_app.logger.info(f"[Resend] Successfully sent email to {email}. Response: {r}")
+        print(f"\n[SUCCESS][Resend] Email sent to {email}")
+        
+    except Exception as e:
+        current_app.logger.error(f"[Resend] Failed to send email to {email}: {str(e)}", exc_info=True)
+        print(f"\n[ERROR] Email send failed: {str(e)}")
         print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
-        raise RuntimeError("Email not configured — set RESEND_API_KEY or MAIL_PASSWORD in HF Secrets.")
-
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = 'Verify your email for Expense Manager'
-    msg['From'] = mail_sender if isinstance(mail_sender, str) else f"{mail_sender[0]} <{mail_sender[1]}>"
-    msg['To'] = email
-    msg.attach(MIMEText(text_body, 'plain'))
-    msg.attach(MIMEText(html_body, 'html'))
-
-    current_app.logger.info(f"[SMTP] Sending email to {email} via {mail_server}:{mail_port}")
-    print(f"\n[DEBUG] Sending email to: {email} via SMTP {mail_server}:{mail_port}")
-
-    with smtplib.SMTP(mail_server, mail_port, timeout=8) as server:
-        server.ehlo()
-        server.starttls(context=ssl.create_default_context())
-        server.ehlo()
-        server.login(mail_username, mail_password)
-        server.sendmail(mail_username, [email], msg.as_string())
-
-    current_app.logger.info(f"[SMTP] Successfully sent email to {email}")
-    print(f"\n[SUCCESS][SMTP] Email sent to {email}")
+        raise
 
 
 
@@ -2273,7 +2225,7 @@ def reset_password():
 
 def _send_mail(to_email: str, subject: str, body: str, html: str = None) -> bool:
     """
-    Send an email using Flask-Mail with improved error handling and logging.
+    Send an email using Resend SDK.
     
     Args:
         to_email: Recipient email address
@@ -2284,43 +2236,38 @@ def _send_mail(to_email: str, subject: str, body: str, html: str = None) -> bool
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
+    import resend
+    
     if not all([to_email, subject, body]):
         current_app.logger.error("Missing required email parameters")
         return False
+        
+    # Use provided API key or fallback to environment variable
+    resend.api_key = os.getenv('RESEND_API_KEY', "re_SpYUGXSy_q6M4uAgp4eJZ9xCQaRwdiFWR")
     
     try:
-        # Create message
-        msg = Message(
-            subject=subject,
-            recipients=[to_email],
-            sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
-            body=body,
-            html=html
-        )
+        current_app.logger.info(f"[Resend] Sending email to {to_email} with subject: {subject}")
+        print(f"\n[DEBUG] Sending email to: {to_email} via Resend SDK")
         
-        # Log the email being sent (without sensitive data)
-        current_app.logger.info(f"Sending email to {to_email} with subject: {subject}")
+        email_data = {
+            "from": "Expense Manager <onboarding@resend.dev>",
+            "to": to_email,
+            "subject": subject,
+            "text": body
+        }
         
-        # Send email (robust: initialize if missing)
-        mail = current_app.extensions.get('mail')
-        if not mail:
-            try:
-                # Explicitly configure mail with current app config
-                mail = Mail()
-                mail.init_app(current_app)
-                current_app.extensions['mail'] = mail
-                current_app.logger.info('Initialized Flask-Mail')
-                print("\n[DEBUG] Successfully initialized Flask-Mail")
-            except Exception as init_err:
-                current_app.logger.error(f"Flask-Mail extension not initialized and failed to initialize: {init_err}")
-                return False
+        if html:
+            email_data["html"] = html
+            
+        r = resend.Emails.send(email_data)
         
-        mail.send(msg)
-        current_app.logger.info(f"Successfully sent email to {to_email}")
+        current_app.logger.info(f"[Resend] Successfully sent email to {to_email}. Response: {r}")
+        print(f"\n[SUCCESS][Resend] Email sent to {to_email}")
         return True
-
+        
     except Exception as e:
-        current_app.logger.error(f"Failed to send email to {to_email}: {str(e)}", exc_info=True)
+        current_app.logger.error(f"[Resend] Failed to send email to {to_email}: {str(e)}", exc_info=True)
+        print(f"\n[ERROR] Email send failed: {str(e)}")
         return False
 
 @expenses_bp.get("")
