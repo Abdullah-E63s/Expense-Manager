@@ -10,6 +10,7 @@ import glob
 import random
 import requests
 import time
+import resend
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from functools import wraps
@@ -433,10 +434,8 @@ def verify_email_token(token: str, max_age: int = 3600) -> str | None:
 
 def send_verification_email(email: str, verification_code: str) -> None:
     """Send verification email using Resend SDK."""
-    import resend
-    
-    # Use provided API key or fallback to environment variable
-    resend.api_key = os.getenv('RESEND_API_KEY', "re_SpYUGXSy_q6M4uAgp4eJZ9xCQaRwdiFWR")
+    # Use API key from environment variable
+    resend.api_key = os.getenv('RESEND_API_KEY')
 
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
@@ -2236,14 +2235,12 @@ def _send_mail(to_email: str, subject: str, body: str, html: str = None) -> bool
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
-    import resend
-    
     if not all([to_email, subject, body]):
         current_app.logger.error("Missing required email parameters")
         return False
         
-    # Use provided API key or fallback to environment variable
-    resend.api_key = os.getenv('RESEND_API_KEY', "re_SpYUGXSy_q6M4uAgp4eJZ9xCQaRwdiFWR")
+    # Use API key from environment variable
+    resend.api_key = os.getenv('RESEND_API_KEY')
     
     try:
         current_app.logger.info(f"[Resend] Sending email to {to_email} with subject: {subject}")
