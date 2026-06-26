@@ -457,22 +457,22 @@ def send_verification_email(email: str, verification_code: str) -> None:
     text_body = f"Your verification code is: {verification_code}\n\nThis code will expire in 5 minutes."
 
     try:
-        current_app.logger.info(f"[Resend] Sending verification email to {email}")
-        print(f"\n[DEBUG] Sending email to: {email} via Resend SDK")
+        current_app.logger.info(f"[SMTP] Sending verification email to {email}")
+        print(f"\n[DEBUG] Sending email to: {email} via SMTP")
         
-        r = resend.Emails.send({
-            "from": "Expense Manager <onboarding@resend.dev>",
-            "to": email,
-            "subject": "Verify your email for Expense Manager",
-            "html": html_body,
-            "text": text_body
-        })
+        msg = Message(
+            subject="Verify your email for Expense Manager",
+            recipients=[email],
+            html=html_body,
+            body=text_body
+        )
+        current_app.extensions['mail'].send(msg)
         
-        current_app.logger.info(f"[Resend] Successfully sent email to {email}. Response: {r}")
-        print(f"\n[SUCCESS][Resend] Email sent to {email}")
+        current_app.logger.info(f"[SMTP] Successfully sent email to {email}.")
+        print(f"\n[SUCCESS][SMTP] Email sent to {email}")
         
     except Exception as e:
-        current_app.logger.error(f"[Resend] Failed to send email to {email}: {str(e)}", exc_info=True)
+        current_app.logger.error(f"[SMTP] Failed to send email to {email}: {str(e)}", exc_info=True)
         print(f"\n[ERROR] Email send failed: {str(e)}")
         print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
         raise
@@ -838,18 +838,21 @@ def send_verification():
         code = user.issue_verification_code(seconds_valid=300)
 
         # Send email
-        delivery = 'email_sent'
         try:
             send_verification_email(email, code)
         except Exception as e:
             current_app.logger.error(f"Error sending verification email: {str(e)}")
-            delivery = 'email_failed'
+            return jsonify({
+                'success': False, 
+                'error': f"Failed to send email. If using a Resend free account, ensure you are sending to the verified email address. Error details: {str(e)}"
+            }), 500
+
         response_payload = {
             'success': True,
             'message': 'Verification code sent successfully',
             'email': email,
             'expires_in': 5,  # minutes
-            'delivery': delivery
+            'delivery': 'email_sent'
         }
         try:
             if current_app.debug or str(os.getenv('EXPOSE_VERIFICATION_CODE', '')).lower() == 'true':
@@ -2239,31 +2242,24 @@ def _send_mail(to_email: str, subject: str, body: str, html: str = None) -> bool
         current_app.logger.error("Missing required email parameters")
         return False
         
-    # Use API key from environment variable
-    resend.api_key = os.getenv('RESEND_API_KEY')
-    
     try:
-        current_app.logger.info(f"[Resend] Sending email to {to_email} with subject: {subject}")
-        print(f"\n[DEBUG] Sending email to: {to_email} via Resend SDK")
+        current_app.logger.info(f"[SMTP] Sending email to {to_email} with subject: {subject}")
+        print(f"\n[DEBUG] Sending email to: {to_email} via SMTP")
         
-        email_data = {
-            "from": "Expense Manager <onboarding@resend.dev>",
-            "to": to_email,
-            "subject": subject,
-            "text": body
-        }
+        msg = Message(
+            subject=subject,
+            recipients=[to_email],
+            body=body,
+            html=html
+        )
+        current_app.extensions['mail'].send(msg)
         
-        if html:
-            email_data["html"] = html
-            
-        r = resend.Emails.send(email_data)
-        
-        current_app.logger.info(f"[Resend] Successfully sent email to {to_email}. Response: {r}")
-        print(f"\n[SUCCESS][Resend] Email sent to {to_email}")
+        current_app.logger.info(f"[SMTP] Successfully sent email to {to_email}.")
+        print(f"\n[SUCCESS][SMTP] Email sent to {to_email}")
         return True
         
     except Exception as e:
-        current_app.logger.error(f"[Resend] Failed to send email to {to_email}: {str(e)}", exc_info=True)
+        current_app.logger.error(f"[SMTP] Failed to send email to {to_email}: {str(e)}", exc_info=True)
         print(f"\n[ERROR] Email send failed: {str(e)}")
         return False
 
