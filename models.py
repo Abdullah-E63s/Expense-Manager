@@ -336,14 +336,13 @@ def init_db():
         # Ensure new columns exist on existing installations without relying on
         # "IF NOT EXISTS" (which may not be supported on some servers)
         try:
-            db_name = os.getenv('MYSQL_DATABASE', 'expense_manager')
             cols_query = (
                 """
                 SELECT COLUMN_NAME FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'users'
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
                 """
             )
-            existing_cols_rows = execute_query(cols_query, (db_name,), fetch_all=True)
+            existing_cols_rows = execute_query(cols_query, fetch_all=True)
             existing_cols = {row['COLUMN_NAME'] for row in (existing_cols_rows or [])}
 
             # Build conditional ALTERs only for missing columns
@@ -383,8 +382,8 @@ def init_db():
 
             # Check expenses table for missing columns
             try:
-                cols_query_exp = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'expenses'"
-                existing_cols_exp = {row['COLUMN_NAME'] for row in (execute_query(cols_query_exp, (db_name,), fetch_all=True) or [])}
+                cols_query_exp = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'expenses'"
+                existing_cols_exp = {row['COLUMN_NAME'] for row in (execute_query(cols_query_exp, fetch_all=True) or [])}
                 if 'picture_url' not in existing_cols_exp:
                     conditional_alters.append("ALTER TABLE expenses ADD COLUMN picture_url VARCHAR(512) AFTER category")
                 if 'receipt_data' not in existing_cols_exp:
@@ -395,8 +394,8 @@ def init_db():
 
             # Check budgets table for missing columns
             try:
-                cols_query_bud = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'budgets'"
-                existing_cols_bud = {row['COLUMN_NAME'] for row in (execute_query(cols_query_bud, (db_name,), fetch_all=True) or [])}
+                cols_query_bud = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'budgets'"
+                existing_cols_bud = {row['COLUMN_NAME'] for row in (execute_query(cols_query_bud, fetch_all=True) or [])}
                 if 'period' not in existing_cols_bud:
                     conditional_alters.append("ALTER TABLE budgets ADD COLUMN period VARCHAR(50) DEFAULT 'monthly' AFTER amount")
             except Exception: pass
