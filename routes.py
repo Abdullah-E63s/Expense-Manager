@@ -432,22 +432,22 @@ def verify_email_token(token: str, max_age: int = 3600) -> str | None:
 
 
 def send_verification_email(email: str, verification_code: str) -> None:
-    """Send verification email using direct smtplib with a hard timeout."""
-    import smtplib
-    import ssl
+    """Send verification email.
+    
+    Primary: Resend HTTP API (works even when HF blocks SMTP ports).
+    Fallback: Gmail SMTP with 8-second timeout.
+    """
+    import requests as _requests
+    import smtplib, ssl
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
-    mail_server = current_app.config.get('MAIL_SERVER', 'smtp.gmail.com')
-    mail_port = int(current_app.config.get('MAIL_PORT', 587))
     mail_username = current_app.config.get('MAIL_USERNAME', '')
     mail_password = current_app.config.get('MAIL_PASSWORD', '')
-    mail_sender = current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
-
-    if not mail_username or not mail_password:
-        current_app.logger.error("MAIL_USERNAME or MAIL_PASSWORD not set. Cannot send email.")
-        print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
-        return
+    mail_server   = current_app.config.get('MAIL_SERVER', 'smtp.gmail.com')
+    mail_port     = int(current_app.config.get('MAIL_PORT', 587))
+    mail_sender   = current_app.config.get('MAIL_DEFAULT_SENDER', mail_username)
+    resend_api_key = os.getenv('RESEND_API_KEY', '')
 
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
@@ -466,8 +466,45 @@ def send_verification_email(email: str, verification_code: str) -> None:
             <p style="margin: 0;">If you didn't request this, please ignore this email.</p>
         </div>
     </div>"""
-
     text_body = f"Your verification code is: {verification_code}\n\nThis code will expire in 5 minutes."
+
+    # ── Method 1: Resend HTTP API (bypasses SMTP port blocking) ──────────────
+    if resend_api_key:
+        try:
+            from_addr = mail_sender if isinstance(mail_sender, str) else f"{mail_sender[0]} <{mail_sender[1]}>"
+            # Resend requires a verified domain; use their onboarding address for testing
+            # Replace with your domain once verified: e.g. "Expense Manager <noreply@yourdomain.com>"
+            resp = _requests.post(
+                'https://api.resend.com/emails',
+                headers={
+                    'Authorization': f'Bearer {resend_api_key}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'from': 'Expense Manager <onboarding@resend.dev>',
+                    'to': [email],
+                    'subject': 'Verify your email for Expense Manager',
+                    'html': html_body,
+                    'text': text_body,
+                },
+                timeout=8
+            )
+            if resp.status_code in (200, 201):
+                current_app.logger.info(f"[Resend] Email sent to {email}")
+                print(f"\n[SUCCESS][Resend] Email sent to {email}")
+                return
+            else:
+                current_app.logger.warning(f"[Resend] Failed ({resp.status_code}): {resp.text} — falling back to SMTP")
+                print(f"\n[WARN][Resend] {resp.status_code}: {resp.text}")
+        except Exception as resend_err:
+            current_app.logger.warning(f"[Resend] Error: {resend_err} — falling back to SMTP")
+            print(f"\n[WARN][Resend] {resend_err}")
+
+    # ── Method 2: Gmail SMTP with hard timeout ────────────────────────────────
+    if not mail_username or not mail_password:
+        current_app.logger.error("No email credentials set (MAIL_USERNAME/MAIL_PASSWORD or RESEND_API_KEY).")
+        print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
+        raise RuntimeError("Email not configured — set RESEND_API_KEY or MAIL_PASSWORD in HF Secrets.")
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'Verify your email for Expense Manager'
@@ -476,33 +513,18 @@ def send_verification_email(email: str, verification_code: str) -> None:
     msg.attach(MIMEText(text_body, 'plain'))
     msg.attach(MIMEText(html_body, 'html'))
 
-    try:
-        current_app.logger.info(f"Sending email to {email} via {mail_server}:{mail_port}")
-        print(f"\n[DEBUG] Sending email to: {email}")
-        print(f"[DEBUG] Using SMTP: {mail_server}:{mail_port}")
+    current_app.logger.info(f"[SMTP] Sending email to {email} via {mail_server}:{mail_port}")
+    print(f"\n[DEBUG] Sending email to: {email} via SMTP {mail_server}:{mail_port}")
 
-        # Hard 8-second timeout — well within Gunicorn's 30s worker limit
-        with smtplib.SMTP(mail_server, mail_port, timeout=8) as server:
-            server.ehlo()
-            server.starttls(context=ssl.create_default_context())
-            server.ehlo()
-            server.login(mail_username, mail_password)
-            server.sendmail(mail_username, [email], msg.as_string())
+    with smtplib.SMTP(mail_server, mail_port, timeout=8) as server:
+        server.ehlo()
+        server.starttls(context=ssl.create_default_context())
+        server.ehlo()
+        server.login(mail_username, mail_password)
+        server.sendmail(mail_username, [email], msg.as_string())
 
-        current_app.logger.info(f"Successfully sent verification email to {email}")
-        print(f"\n[SUCCESS] Email sent to {email}")
-
-    except smtplib.SMTPAuthenticationError as e:
-        current_app.logger.error(f"SMTP auth failed: {e}")
-        print(f"\n[ERROR] SMTP Authentication failed — check MAIL_USERNAME and MAIL_PASSWORD")
-        raise
-
-    except Exception as e:
-        current_app.logger.error(f"Failed to send email to {email}: {e}", exc_info=True)
-        print(f"\n[ERROR] Email send failed: {e}")
-        print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
-        raise
-
+    current_app.logger.info(f"[SMTP] Successfully sent email to {email}")
+    print(f"\n[SUCCESS][SMTP] Email sent to {email}")
 
 
 
