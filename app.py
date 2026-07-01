@@ -196,6 +196,7 @@ app.register_blueprint(admin_bp)
 # where the session cookie (and thus CSRF token) is on a different domain.
 csrf.exempt(auth_bp)
 csrf.exempt(expenses_bp)
+csrf.exempt(admin_bp)
 
 # ── Template context processors ───────────────────────────────────────────────
 @app.context_processor
