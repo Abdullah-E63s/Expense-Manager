@@ -314,6 +314,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Export Data behavior
+    const exportDataBtn = document.getElementById('export-data-btn');
+    if (exportDataBtn) {
+        exportDataBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/api/expenses/export';
+        });
+    }
+
     // Global password toggle behavior
     document.querySelectorAll('.toggle-password').forEach(span => {
         span.style.cursor = 'pointer';

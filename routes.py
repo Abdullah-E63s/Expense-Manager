@@ -2868,3 +2868,33 @@ def delete_budget():
     budget.delete()
     return jsonify({"message": "Budget deleted"}), 200
 
+
+@expenses_bp.get("/export")
+def export_expenses():
+    """Export all expenses for the current user to a CSV file."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    expenses = Expense.get_by_user(user.id)
+    
+    import csv
+    from io import StringIO
+    
+    si = StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Date', 'Category', 'Amount', 'Description'])
+    
+    for e in expenses:
+        date_str = e.created_at.strftime('%Y-%m-%d %H:%M:%S') if e.created_at else ''
+        cw.writerow([date_str, e.category or '', float(e.value) if e.value is not None else 0.0, e.description or ''])
+        
+    output = si.getvalue()
+    
+    response = Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=expenses_export.csv"}
+    )
+    return response
+
