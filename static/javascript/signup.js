@@ -290,37 +290,13 @@ async function sendVerificationCode() {
             submitBtn.textContent = 'Creating Account...';
             
             try {
-                // Get reCAPTCHA token
+                // Get reCAPTCHA token dynamically
                 let recaptcha_token = '';
-                if (typeof grecaptcha !== 'undefined' && grecaptcha.enterprise) {
-                    try {
-                        // Ensure reCAPTCHA is ready
-                        await new Promise((resolve, reject) => {
-                            const timeout = setTimeout(() => {
-                                console.warn('reCAPTCHA loading timeout');
-                                resolve();
-                            }, 1000);
-                            
-                            grecaptcha.enterprise.ready(() => {
-                                clearTimeout(timeout);
-                                resolve();
-                            });
-                        });
-                        
-                        // Now execute reCAPTCHA
-                        recaptcha_token = await grecaptcha.enterprise.execute(
-                            '6LfCHPMrAAAAAOI8sz3qDMYObRo70NvBGU5rtRsP',
-                            { action: 'signup' }
-                        );
-                    } catch (recaptchaError) {
-                        console.warn('reCAPTCHA error:', recaptchaError);
-                        // Continue without reCAPTCHA token in development
-                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                            console.warn('Proceeding without reCAPTCHA in development');
-                        } else {
-                            throw new Error('Failed to verify you are human. Please try again.');
-                        }
-                    }
+                if (typeof window.getRecaptchaToken === 'function') {
+                    recaptcha_token = await window.getRecaptchaToken('signup');
+                }
+                if (!recaptcha_token && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    throw new Error('Failed to verify you are human. Please try again.');
                 }
 
                 // Prepare the request data
