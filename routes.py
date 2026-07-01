@@ -436,10 +436,30 @@ def verify_email_token(token: str, max_age: int = 3600) -> str | None:
 
 
 def _send_smtp_email_thread(mail_username: str, mail_password: str, to_email: str, subject: str, html_body: str, text_body: str):
-    """Send email via Gmail SMTP in a background thread (non-blocking).
-    Tries port 465 (SSL) first, then falls back to port 587 (STARTTLS).
-    This runs outside the Flask app context intentionally.
+    """Send email via Gmail SMTP (or Google Apps Script relay) in a background thread (non-blocking).
+    If GMAIL_RELAY_URL is set, it posts to the HTTP endpoint to bypass SMTP blocks.
+    Otherwise, tries port 465 (SSL) first, then falls back to port 587 (STARTTLS).
     """
+    relay_url = os.environ.get('GMAIL_RELAY_URL', '')
+    if relay_url:
+        try:
+            print(f"[DEBUG] Using Google Apps Script relay to send email to {to_email}")
+            r = requests.post(relay_url, json={
+                "to": to_email,
+                "subject": subject,
+                "html": html_body,
+                "text": text_body
+            }, timeout=30)
+            if r.status_code == 200:
+                print(f"[SUCCESS][Relay] Email sent to {to_email}")
+                return True
+            else:
+                print(f"[ERROR][Relay] HTTP {r.status_code}: {r.text}")
+        except Exception as e:
+            print(f"[ERROR][Relay] {str(e)}")
+        # If relay failed or errored out, we fall back to standard SMTP in case it was a fluke
+        print("[DEBUG] Relay failed, attempting direct SMTP fallback")
+
     msg = email.mime.multipart.MIMEMultipart('alternative')
     msg['Subject'] = subject
     msg['From'] = f'Expense Manager <{mail_username}>'
