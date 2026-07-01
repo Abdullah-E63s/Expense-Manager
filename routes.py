@@ -10,7 +10,10 @@ import glob
 import random
 import requests
 import time
-import resend
+import threading
+import smtplib
+import email.mime.multipart
+import email.mime.text
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from functools import wraps
@@ -432,10 +435,49 @@ def verify_email_token(token: str, max_age: int = 3600) -> str | None:
         return None
 
 
+def _send_smtp_email_thread(mail_username: str, mail_password: str, to_email: str, subject: str, html_body: str, text_body: str):
+    """Send email via Gmail SMTP in a background thread (non-blocking).
+    Tries port 465 (SSL) first, then falls back to port 587 (STARTTLS).
+    This runs outside the Flask app context intentionally.
+    """
+    msg = email.mime.multipart.MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = f'Expense Manager <{mail_username}>'
+    msg['To'] = to_email
+    msg.attach(email.mime.text.MIMEText(text_body, 'plain'))
+    msg.attach(email.mime.text.MIMEText(html_body, 'html'))
+
+    def _attempt(port, use_ssl):
+        try:
+            if use_ssl:
+                with smtplib.SMTP_SSL('smtp.gmail.com', port, timeout=30) as server:
+                    server.login(mail_username, mail_password)
+                    server.sendmail(mail_username, [to_email], msg.as_string())
+            else:
+                with smtplib.SMTP('smtp.gmail.com', port, timeout=30) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(mail_username, mail_password)
+                    server.sendmail(mail_username, [to_email], msg.as_string())
+            print(f"[SUCCESS][SMTP:{port}] Email sent to {to_email}")
+            return True
+        except Exception as e:
+            print(f"[ERROR][SMTP:{port}] {str(e)}")
+            return False
+
+    # Try port 465 (SSL) first — more likely to be open on cloud hosts
+    if not _attempt(465, use_ssl=True):
+        # Fallback to port 587 (STARTTLS)
+        _attempt(587, use_ssl=False)
+
+
 def send_verification_email(email: str, verification_code: str) -> None:
-    """Send verification email using Resend SDK (HTTPS API — works on HF Spaces)."""
-    resend.api_key = os.getenv('RESEND_API_KEY')
-    from_email = os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+    """Queue a verification email to be sent in a background thread.
+    Returns immediately so the gunicorn worker is never blocked.
+    """
+    mail_username = os.environ.get('MAIL_USERNAME', 'exp2tester@gmail.com')
+    mail_password = os.environ.get('MAIL_PASSWORD', '')
 
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
@@ -456,26 +498,14 @@ def send_verification_email(email: str, verification_code: str) -> None:
     </div>"""
     text_body = f"Your verification code is: {verification_code}\n\nThis code will expire in 5 minutes."
 
-    try:
-        current_app.logger.info(f"[Resend] Sending verification email to {email}")
-        print(f"\n[DEBUG] Sending email to: {email} via Resend SDK")
-        
-        r = resend.Emails.send({
-            "from": f"Expense Manager <{from_email}>",
-            "to": email,
-            "subject": "Verify your email for Expense Manager",
-            "html": html_body,
-            "text": text_body
-        })
-        
-        current_app.logger.info(f"[Resend] Successfully sent email to {email}. ID: {r.get('id', 'N/A')}")
-        print(f"\n[SUCCESS][Resend] Email sent to {email}")
-        
-    except Exception as e:
-        current_app.logger.error(f"[Resend] Failed to send email to {email}: {str(e)}", exc_info=True)
-        print(f"\n[ERROR] Email send failed: {str(e)}")
-        print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
-        raise
+    print(f"[DEBUG] Queuing email to {email} in background thread")
+    t = threading.Thread(
+        target=_send_smtp_email_thread,
+        args=(mail_username, mail_password, email, "Verify your email for Expense Manager", html_body, text_body),
+        daemon=True
+    )
+    t.start()
+    print(f"[DEBUG] Email thread started for {email}")
 
 
 
@@ -1496,8 +1526,11 @@ def resend_code():
     if user and not user.is_active:
         code = user.issue_verification_code(minutes_valid=1)
         user.save()  # Save the changes
-        # Send verification email with code and link
-        send_verification_email(email, code)
+        # Send verification email with code and link (non-blocking)
+        try:
+            send_verification_email(email, code)
+        except Exception as e:
+            current_app.logger.error(f"Error queuing resend verification email: {str(e)}")
         current_app.logger.info(f"Resent verification code for {email}: {code}")
 
     # Always return 200 to avoid user enumeration
@@ -2226,46 +2259,23 @@ def reset_password():
 
 
 def _send_mail(to_email: str, subject: str, body: str, html: str = None) -> bool:
-    """
-    Send an email using Resend SDK.
-    
-    Args:
-        to_email: Recipient email address
-        subject: Email subject
-        body: Plain text email body content
-        html: Optional HTML version of the email
-        
-    Returns:
-        bool: True if email was sent successfully, False otherwise
-    """
+    """Send an email via Gmail SMTP in a non-blocking background thread."""
     if not all([to_email, subject, body]):
         current_app.logger.error("Missing required email parameters")
         return False
-        
     try:
-        resend.api_key = os.getenv('RESEND_API_KEY')
-        from_email = os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
-        current_app.logger.info(f"[Resend] Sending email to {to_email} with subject: {subject}")
-        print(f"\n[DEBUG] Sending email to: {to_email} via Resend SDK")
-        
-        email_data = {
-            "from": f"Expense Manager <{from_email}>",
-            "to": to_email,
-            "subject": subject,
-            "text": body
-        }
-        if html:
-            email_data["html"] = html
-            
-        r = resend.Emails.send(email_data)
-        
-        current_app.logger.info(f"[Resend] Successfully sent email to {to_email}. ID: {r.get('id', 'N/A')}")
-        print(f"\n[SUCCESS][Resend] Email sent to {to_email}")
+        mail_username = os.environ.get('MAIL_USERNAME', 'exp2tester@gmail.com')
+        mail_password = os.environ.get('MAIL_PASSWORD', '')
+        current_app.logger.info(f"[SMTP] Queuing email to {to_email}: {subject}")
+        t = threading.Thread(
+            target=_send_smtp_email_thread,
+            args=(mail_username, mail_password, to_email, subject, html or '', body),
+            daemon=True
+        )
+        t.start()
         return True
-        
     except Exception as e:
-        current_app.logger.error(f"[Resend] Failed to send email to {to_email}: {str(e)}", exc_info=True)
-        print(f"\n[ERROR] Email send failed: {str(e)}")
+        current_app.logger.error(f"[SMTP] Failed to queue email to {to_email}: {str(e)}", exc_info=True)
         return False
 
 @expenses_bp.get("")
