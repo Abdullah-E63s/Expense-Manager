@@ -433,9 +433,9 @@ def verify_email_token(token: str, max_age: int = 3600) -> str | None:
 
 
 def send_verification_email(email: str, verification_code: str) -> None:
-    """Send verification email using Resend SDK."""
-    # Use API key from environment variable
+    """Send verification email using Resend SDK (HTTPS API — works on HF Spaces)."""
     resend.api_key = os.getenv('RESEND_API_KEY')
+    from_email = os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
 
     html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
@@ -457,22 +457,22 @@ def send_verification_email(email: str, verification_code: str) -> None:
     text_body = f"Your verification code is: {verification_code}\n\nThis code will expire in 5 minutes."
 
     try:
-        current_app.logger.info(f"[SMTP] Sending verification email to {email}")
-        print(f"\n[DEBUG] Sending email to: {email} via SMTP")
+        current_app.logger.info(f"[Resend] Sending verification email to {email}")
+        print(f"\n[DEBUG] Sending email to: {email} via Resend SDK")
         
-        msg = Message(
-            subject="Verify your email for Expense Manager",
-            recipients=[email],
-            html=html_body,
-            body=text_body
-        )
-        current_app.extensions['mail'].send(msg)
+        r = resend.Emails.send({
+            "from": f"Expense Manager <{from_email}>",
+            "to": email,
+            "subject": "Verify your email for Expense Manager",
+            "html": html_body,
+            "text": text_body
+        })
         
-        current_app.logger.info(f"[SMTP] Successfully sent email to {email}.")
-        print(f"\n[SUCCESS][SMTP] Email sent to {email}")
+        current_app.logger.info(f"[Resend] Successfully sent email to {email}. ID: {r.get('id', 'N/A')}")
+        print(f"\n[SUCCESS][Resend] Email sent to {email}")
         
     except Exception as e:
-        current_app.logger.error(f"[SMTP] Failed to send email to {email}: {str(e)}", exc_info=True)
+        current_app.logger.error(f"[Resend] Failed to send email to {email}: {str(e)}", exc_info=True)
         print(f"\n[ERROR] Email send failed: {str(e)}")
         print(f"\n[FALLBACK] Verification code for {email}: {verification_code}")
         raise
@@ -2243,23 +2243,28 @@ def _send_mail(to_email: str, subject: str, body: str, html: str = None) -> bool
         return False
         
     try:
-        current_app.logger.info(f"[SMTP] Sending email to {to_email} with subject: {subject}")
-        print(f"\n[DEBUG] Sending email to: {to_email} via SMTP")
+        resend.api_key = os.getenv('RESEND_API_KEY')
+        from_email = os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+        current_app.logger.info(f"[Resend] Sending email to {to_email} with subject: {subject}")
+        print(f"\n[DEBUG] Sending email to: {to_email} via Resend SDK")
         
-        msg = Message(
-            subject=subject,
-            recipients=[to_email],
-            body=body,
-            html=html
-        )
-        current_app.extensions['mail'].send(msg)
+        email_data = {
+            "from": f"Expense Manager <{from_email}>",
+            "to": to_email,
+            "subject": subject,
+            "text": body
+        }
+        if html:
+            email_data["html"] = html
+            
+        r = resend.Emails.send(email_data)
         
-        current_app.logger.info(f"[SMTP] Successfully sent email to {to_email}.")
-        print(f"\n[SUCCESS][SMTP] Email sent to {to_email}")
+        current_app.logger.info(f"[Resend] Successfully sent email to {to_email}. ID: {r.get('id', 'N/A')}")
+        print(f"\n[SUCCESS][Resend] Email sent to {to_email}")
         return True
         
     except Exception as e:
-        current_app.logger.error(f"[SMTP] Failed to send email to {to_email}: {str(e)}", exc_info=True)
+        current_app.logger.error(f"[Resend] Failed to send email to {to_email}: {str(e)}", exc_info=True)
         print(f"\n[ERROR] Email send failed: {str(e)}")
         return False
 
