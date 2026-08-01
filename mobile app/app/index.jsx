@@ -130,9 +130,16 @@ export default function App() {
     if (!response) return;
 
     if (response.type === 'success') {
-      const idToken = response.params?.id_token;
+      const idToken = response.params?.id_token || response.authentication?.idToken;
+      
       if (idToken) {
         webviewRef.current?.injectJavaScript(buildTokenInjection(idToken));
+      } else {
+        alert("Google auth succeeded but no id_token was found in response! Response: " + JSON.stringify(response));
+      }
+    } else {
+      if (response.type !== 'dismiss') {
+        alert("Google auth failed: " + JSON.stringify(response));
       }
     }
     setIsAuthenticating(false);
