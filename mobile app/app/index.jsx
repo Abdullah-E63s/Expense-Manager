@@ -42,8 +42,50 @@ const INJECT_ON_LOAD = `
       document.head.appendChild(meta);
     }
 
-    // 2. Tell the native layer what kind of page this is.
-    //    We check for the login form and the Google button defined in login.html.
+    // 2. Hide the web app's own Google button — we handle Google Sign-In natively.
+    //    Run immediately and again on load to catch dynamically rendered buttons.
+    function hideWebGoogleButton() {
+      var btn = document.getElementById('google-login-btn');
+      if (btn) {
+        btn.style.display = 'none';
+        // Also hide the <div class="divider"> that sits directly before it
+        var prev = btn.previousElementSibling;
+        if (prev && prev.classList && prev.classList.contains('divider')) {
+          prev.style.display = 'none';
+        }
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', hideWebGoogleButton);
+    } else {
+      hideWebGoogleButton();
+    }
+    window.addEventListener('load', hideWebGoogleButton);
+
+    // 3. Intercept /api/auth/google responses to force redirect → /dashboard.
+    //    The backend returns redirect:"/" which shows the login page again.
+    //    This fix was in the original app and must be kept.
+    var _origFetch = window.fetch;
+    window.fetch = function() {
+      var args = arguments;
+      return _origFetch.apply(this, args).then(function(res) {
+        var url = typeof args[0] === 'string' ? args[0] : '';
+        if (url.includes('/api/auth/google') && res.ok) {
+          var _origJson = res.json.bind(res);
+          res.json = function() {
+            return _origJson().then(function(data) {
+              if (data && data.success) {
+                data.redirect = '/dashboard';
+              }
+              return data;
+            });
+          };
+        }
+        return res;
+      });
+    };
+
+    // 4. Tell the native layer what kind of page this is.
     function notifyPageType() {
       var isLogin =
         !!document.getElementById('login-form') ||
@@ -54,15 +96,11 @@ const INJECT_ON_LOAD = `
         JSON.stringify({ type: 'PAGE_TYPE', isLogin: isLogin, url: window.location.href })
       );
     }
-
-    // Fire after DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', notifyPageType);
     } else {
       notifyPageType();
     }
-
-    // Also re-check after full page load (deferred scripts may alter DOM)
     window.addEventListener('load', notifyPageType);
   })();
   true;
@@ -188,8 +226,14 @@ export default function App() {
   const onNavigationStateChange = (navState) => {
     const url = navState.url || '';
 
-    // Reached the dashboard → auth succeeded, clear all states
-    if (url.includes('/dashboard') || url.includes('/home')) {
+    // Any page that is NOT the login page means auth succeeded — clear states
+    const isDashboard =
+      url.includes('/dashboard') ||
+      url.includes('/home') ||
+      url.includes('/account') ||
+      url.includes('/expenses');
+
+    if (isDashboard) {
       setIsLoginPage(false);
       setIsAuthenticating(false);
     }
