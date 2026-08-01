@@ -31,26 +31,33 @@ const INJECT_ON_LOAD = `
 
     // 2. Intercept the web app's Google button click → tell React Native to
     //    handle it natively (bypasses WebView Google auth restriction).
-    function hijackGoogleButton() {
-      var btn = document.getElementById('google-login-btn') || document.getElementById('google-signin-btn');
-      if (!btn || btn.__nativeHijacked) return;
-      btn.__nativeHijacked = true;
+    // Event delegation (Capture Phase)
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+      while (target && target !== document) {
+        if (target.id === 'google-login-btn' || target.id === 'google-signin-btn' || target.classList.contains('google-btn')) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          window.ReactNativeWebView.postMessage(
+            JSON.stringify({ type: 'GOOGLE_SIGN_IN_CLICKED' })
+          );
+          return;
+        }
+        target = target.parentNode;
+      }
+    }, true);
 
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        window.ReactNativeWebView.postMessage(
-          JSON.stringify({ type: 'GOOGLE_SIGN_IN_CLICKED' })
-        );
-      }, true);
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', hijackGoogleButton);
-    } else {
-      hijackGoogleButton();
-    }
-    window.addEventListener('load', hijackGoogleButton);
+    // Prevent Google from rendering the iframe if the library loads
+    var checkGoogle = setInterval(function() {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        window.google.accounts.id.renderButton = function(container, options) {
+           // Do nothing, we want to keep the HTML button so our click listener above works!
+           console.log("WebView Intercepted renderButton! Iframe blocked.");
+        };
+        clearInterval(checkGoogle);
+      }
+    }, 100);
 
     // 3. Intercept /api/auth/google fetch response to force redirect → /dashboard.
     //    Backend returns redirect:"/" which shows login page again — override it.
