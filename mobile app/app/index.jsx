@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 
 // Required for expo-auth-session to complete OAuth redirect back to app
 WebBrowser.maybeCompleteAuthSession();
@@ -117,9 +118,12 @@ export default function App() {
   const webviewRef = useRef(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
+  const redirectUri = AuthSession.makeRedirectUri();
+  
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
     responseType: 'id_token',
+    redirectUri,
     // Uncomment when you have native OAuth client IDs from Google Cloud Console:
     // androidClientId: 'REPLACE_WITH_ANDROID_CLIENT_ID.apps.googleusercontent.com',
     // iosClientId:     'REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com',
