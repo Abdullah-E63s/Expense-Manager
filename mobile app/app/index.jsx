@@ -32,7 +32,7 @@ const INJECT_ON_LOAD = `
     // 2. Intercept the web app's Google button click → tell React Native to
     //    handle it natively (bypasses WebView Google auth restriction).
     function hijackGoogleButton() {
-      var btn = document.getElementById('google-login-btn');
+      var btn = document.getElementById('google-login-btn') || document.getElementById('google-signin-btn');
       if (!btn || btn.__nativeHijacked) return;
       btn.__nativeHijacked = true;
 
