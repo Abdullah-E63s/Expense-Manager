@@ -172,7 +172,7 @@ export default function App() {
     const url = navState.url || '';
 
     // Force broken /login redirect back to root
-    if (url.endsWith('/login') && url.includes('hf.space')) {
+    if (url.endsWith('/login') && url.includes('vercel.app')) {
       webviewRef.current?.stopLoading();
       webviewRef.current?.injectJavaScript(
         `window.location.href = '${BASE_URL}'; true;`

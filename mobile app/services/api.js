@@ -3,7 +3,7 @@ import axios from 'axios';
 // ── Base URL ─────────────────────────────────────────────────────────────────
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  'https://ghost993-expensemanager.hf.space';
+  'https://expense-manager-ubm8.vercel.app';
 
 const api = axios.create({
   baseURL: BASE_URL,
