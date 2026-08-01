@@ -11,7 +11,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://ghost993-expensemanager.hf.space';
+  process.env.EXPO_PUBLIC_API_URL || 'https://expense-manager-ubm8.vercel.app';
 
 const GOOGLE_WEB_CLIENT_ID =
   '359684919711-q7ehjfbsapj9tenm4h3e4q2f678igong.apps.googleusercontent.com';
