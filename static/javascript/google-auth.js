@@ -256,6 +256,11 @@ async function handleCredentialResponse(response) {
         // Give WebView native cookie engine a brief moment to commit Set-Cookie
         await new Promise(resolve => setTimeout(resolve, 200));
 
+        // Debug: Log cookies before redirecting
+        if (window.ReactNativeWebView) {
+            alert('Cookies before redirect: ' + document.cookie);
+        }
+
         const target = data.redirect || '/dashboard';
         window.location.replace(target);
 

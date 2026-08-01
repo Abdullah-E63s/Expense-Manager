@@ -1051,11 +1051,6 @@ def api_login():
 
 
 @auth_bp.route("/google", methods=["POST", "OPTIONS"])
-@cross_origin(origins='*', 
-             methods=['POST', 'OPTIONS'],
-             allow_headers=['Content-Type', 'X-CSRFToken', 'Authorization', 'X-Requested-With'],
-             expose_headers=['Content-Type'],
-             supports_credentials=True)
 def google_sign_in():
     """Handle Google Sign-In with Firebase ID token."""
     current_app.logger.info("Google Sign-In endpoint hit")
@@ -1214,12 +1209,6 @@ def google_sign_in():
         
         response = jsonify(response_data)
         
-        # Only set CORS headers if Origin header is explicitly sent and not wildcard
-        req_origin = request.headers.get('Origin')
-        if req_origin and req_origin != '*':
-            response.headers['Access-Control-Allow-Origin'] = req_origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-        
         return response
             
     except ValueError as e:
@@ -1304,9 +1293,6 @@ def set_password():
         return jsonify({"error": "Failed to set password. Please try again."}), 500
 
 @auth_bp.post("/signup")
-@cross_origin(origins='*', 
-             supports_credentials=True,
-             allow_headers=["Content-Type", "X-CSRFToken", "Authorization"])
 def signup():
     """Complete signup by setting a password for a verified user.
     Flow:
@@ -1574,10 +1560,6 @@ def resend_code():
 
 
 @auth_bp.route("/login", methods=["POST", "OPTIONS"])
-@cross_origin(origins='*', 
-             supports_credentials=True,
-             allow_headers=["Content-Type", "X-CSRFToken", "Authorization"],
-             methods=["POST"])
 def login():
     """Authenticate a user and start a session."""
     # Handle preflight request

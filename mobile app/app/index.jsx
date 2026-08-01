@@ -21,13 +21,13 @@ const INJECT_ON_LOAD = `
     'use strict';
 
     // 1. Fix viewport for mobile rendering
-    var existing = document.querySelector('meta[name="viewport"]');
-    if (!existing) {
-      var meta = document.createElement('meta');
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
       meta.name = 'viewport';
-      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
       document.head.appendChild(meta);
     }
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
 
     // 2. Intercept the web app's Google button click → tell React Native to
     //    handle it natively (bypasses WebView Google auth restriction).
@@ -102,7 +102,17 @@ function buildTokenInjection(idToken) {
       .then(res => res.json())
       .then(async data => {
         if (data.success) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Test if session cookie works
+          try {
+             const profileRes = await fetch('${BASE_URL}/api/auth/account/profile', { credentials: 'include' });
+             const profileData = await profileRes.json();
+             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG_LOG', msg: 'Profile after auth: ' + JSON.stringify(profileData) }));
+          } catch (e) {
+             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG_LOG', msg: 'Profile fetch error: ' + e.message }));
+          }
+
           window.location.replace('${BASE_URL}/dashboard');
         } else {
           alert('Backend Google Auth failed: ' + JSON.stringify(data));
@@ -163,6 +173,8 @@ export default function App() {
         if (!request || isAuthenticating) return;
         setIsAuthenticating(true);
         await promptAsync();
+      } else if (msg.type === 'DEBUG_LOG') {
+        alert(msg.msg);
       }
     } catch (_) {}
   };
