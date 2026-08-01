@@ -1,5 +1,5 @@
 // Google OAuth2 Configuration
-let GOOGLE_CLIENT_ID = "359684919711-q7ehjfbsapj9tenm4h3e4q2f678igong.apps.googleusercontent.com";
+let GOOGLE_CLIENT_ID = null;
 let isGoogleInitialized = false;
 
 // Get client ID from server configuration first, fallback to constant

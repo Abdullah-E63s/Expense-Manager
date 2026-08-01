@@ -1087,11 +1087,10 @@ def google_sign_in():
         if not FIREBASE_AVAILABLE or not firebase_auth:
             current_app.logger.warning('Firebase Auth not available, using direct token verification')
             # Use Google's token verification as fallback
-            google_client_id = current_app.config.get('GOOGLE_CLIENT_ID') or "359684919711-q7ehjfbsapj9tenm4h3e4q2f678igong.apps.googleusercontent.com"
             idinfo = google_id_token.verify_oauth2_token(
                 id_token_str,
                 google_requests.Request(),
-                google_client_id
+                current_app.config['GOOGLE_CLIENT_ID']
             )
             # Ensure the token is valid and contains required fields
             if 'email' not in idinfo or not idinfo.get('email_verified', False):
@@ -1114,11 +1113,10 @@ def google_sign_in():
                 current_app.logger.info('Successfully verified Firebase ID token')
             except Exception as fb_ex:
                 current_app.logger.warning(f'Firebase verify_id_token failed: {fb_ex}; attempting direct Google token verification')
-                google_client_id = current_app.config.get('GOOGLE_CLIENT_ID') or "359684919711-q7ehjfbsapj9tenm4h3e4q2f678igong.apps.googleusercontent.com"
                 idinfo = google_id_token.verify_oauth2_token(
                     id_token_str,
                     google_requests.Request(),
-                    google_client_id
+                    current_app.config['GOOGLE_CLIENT_ID']
                 )
                 if 'email' not in idinfo or not idinfo.get('email_verified', False):
                     raise ValueError('Invalid Google token: Missing or unverified email')
@@ -1201,7 +1199,6 @@ def google_sign_in():
         
         # Create user session
         session["user_id"] = user.id
-        session["email"] = user.email
         session.permanent = True
         
         # Create response
@@ -1211,7 +1208,7 @@ def google_sign_in():
             "email": user.email,
             "is_google_user": True,
             "needs_password": False,
-            "redirect": "/dashboard"
+            "redirect": "/"
         }
         
         # Create response with CORS headers

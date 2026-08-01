@@ -13,8 +13,7 @@ WebBrowser.maybeCompleteAuthSession();
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'https://expense-manager-ubm8.vercel.app';
 
-const GOOGLE_WEB_CLIENT_ID =
-  '359684919711-q7ehjfbsapj9tenm4h3e4q2f678igong.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
 // ── Scripts injected into the WebView on every page load ──────────────────────
 const INJECT_ON_LOAD = `
