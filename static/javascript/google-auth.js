@@ -154,19 +154,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isInitialized = await initializeGoogleIdentity();
         if (!isInitialized) throw new Error('Failed to initialize Google Identity Services');
 
-        // Render the Google button into the container
-        google.accounts.id.renderButton(
-            googleLoginBtn,
-            {
-                type: 'standard',
-                theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular',
-                logo_alignment: 'left',
-                width: googleLoginBtn.offsetWidth || 250
-            }
-        );
+        // Render the Google button into the container (if not in React Native WebView)
+        if (window.ReactNativeWebView) {
+            console.log('Running in React Native WebView, keeping native button for interception.');
+        } else {
+            google.accounts.id.renderButton(
+                googleLoginBtn,
+                {
+                    type: 'standard',
+                    theme: 'outline',
+                    size: 'large',
+                    text: 'signin_with',
+                    shape: 'rectangular',
+                    logo_alignment: 'left',
+                    width: googleLoginBtn.offsetWidth || 250
+                }
+            );
+        }
     } catch (error) {
         console.error('Google Sign-In init/render error:', error);
         showError('Failed to load Google Sign-In. Please refresh and try again.');
