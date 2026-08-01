@@ -100,9 +100,10 @@ function buildTokenInjection(idToken) {
         body: JSON.stringify({ id_token: token })
       })
       .then(res => res.json())
-      .then(data => {
+      .then(async data => {
         if (data.success) {
-          window.location.href = '${BASE_URL}/dashboard';
+          await new Promise(resolve => setTimeout(resolve, 200));
+          window.location.replace('${BASE_URL}/dashboard');
         } else {
           alert('Backend Google Auth failed: ' + JSON.stringify(data));
         }

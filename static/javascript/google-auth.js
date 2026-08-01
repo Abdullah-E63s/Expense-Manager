@@ -249,12 +249,15 @@ async function handleCredentialResponse(response) {
 
         console.log('Authentication successful, redirecting...');
 
-        // Redirect to dashboard or home page
-        if (data.redirect) {
-            window.location.href = data.redirect;
-        } else {
-            window.location.href = '/';
+        if (data.user) {
+            try { localStorage.setItem('user', JSON.stringify(data.user)); } catch (_) {}
         }
+
+        // Give WebView native cookie engine a brief moment to commit Set-Cookie
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const target = data.redirect || '/dashboard';
+        window.location.replace(target);
 
     } catch (error) {
         console.error('Google Sign-In error:', error);

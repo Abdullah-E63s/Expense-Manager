@@ -1199,6 +1199,7 @@ def google_sign_in():
         
         # Create user session
         session["user_id"] = user.id
+        session["email"] = user.email
         session.permanent = True
         
         # Create response
@@ -1208,13 +1209,16 @@ def google_sign_in():
             "email": user.email,
             "is_google_user": True,
             "needs_password": False,
-            "redirect": "/"
+            "redirect": "/dashboard"
         }
         
-        # Create response with CORS headers
         response = jsonify(response_data)
-        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        
+        # Only set CORS headers if Origin header is explicitly sent and not wildcard
+        req_origin = request.headers.get('Origin')
+        if req_origin and req_origin != '*':
+            response.headers['Access-Control-Allow-Origin'] = req_origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
         
         return response
             
