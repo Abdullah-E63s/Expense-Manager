@@ -198,5 +198,8 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: '#0a0a0f',
+    // Workaround for Android WebView black screen after returning from background
+    opacity: 0.99,
+    overflow: 'hidden',
   },
 });
