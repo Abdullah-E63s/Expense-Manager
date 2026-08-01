@@ -338,6 +338,18 @@ def forgot_page():
     return render_template("forgot.html")
 
 
+@pages_bp.get("/privacy-policy")
+def privacy_page():
+    """Render the privacy policy page."""
+    return render_template("privacy.html")
+
+
+@pages_bp.get("/terms-of-service")
+def terms_page():
+    """Render the terms of service page."""
+    return render_template("terms.html")
+
+
 @pages_bp.get("/set-password")
 def set_password_page():
     """Render the set password page for password reset."""
