@@ -82,7 +82,7 @@ class Config:
     # -------------------------
     # Google OAuth
     # -------------------------
-    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID") or "359684919711-q7ehjfbsapj9tenm4h3e4q2f678igong.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
     # Default derives from _BASE_URL so it works on HF Spaces without manual config.
     GOOGLE_REDIRECT_URI = os.environ.get(

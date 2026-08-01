@@ -23,8 +23,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from config import get_config
 from models import init_db, User, execute_query, Database
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 # ── App factory ──────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder='static', template_folder='templates')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.config.from_object(get_config())
 
 # Ensure session cookie settings are explicitly set

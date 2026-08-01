@@ -167,17 +167,8 @@ export default function App() {
     } catch (_) {}
   };
 
-  // ── Navigation state handler ──────────────────────────────────────────────
   const onNavigationStateChange = (navState) => {
-    const url = navState.url || '';
-
-    // Force broken /login redirect back to root
-    if (url.endsWith('/login') && url.includes('vercel.app')) {
-      webviewRef.current?.stopLoading();
-      webviewRef.current?.injectJavaScript(
-        `window.location.href = '${BASE_URL}'; true;`
-      );
-    }
+    // Navigation state monitoring if needed
   };
 
   // ─────────────────────────────────────────────────────────────────────────
