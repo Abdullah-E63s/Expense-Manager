@@ -875,3 +875,125 @@ textarea::placeholder {
   padding: 4px 8px;
   font-size: 11px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* Comprehensive Mobile & Tablet Responsive Optimizations                    */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Prevent unwanted zoom on mobile inputs */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .container {
+    padding: 12px;
+    gap: 16px;
+  }
+
+  .header {
+    padding: 12px 16px;
+  }
+
+  .brand-name {
+    font-size: 1.05rem;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .header-actions .btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    margin-left: 0;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+
+  .analytics-overview {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px 8px;
+  }
+
+  .stat-card div:first-child {
+    font-size: 18px;
+  }
+
+  .stat-card div:last-child {
+    font-size: 12px;
+  }
+
+  /* Expenses list item responsive layout */
+  #expenses-list .exp-row {
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      "desc val actions"
+      "cat cat actions";
+    gap: 6px 10px;
+    padding: 12px 10px;
+  }
+
+  #expenses-list .exp-desc {
+    grid-area: desc;
+    font-weight: 600;
+  }
+
+  #expenses-list .exp-val {
+    grid-area: val;
+    text-align: right;
+  }
+
+  #expenses-list .exp-cat {
+    grid-area: cat;
+  }
+
+  #expenses-list .exp-actions {
+    grid-area: actions;
+  }
+
+  .panel {
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .analytics-overview {
+    grid-template-columns: 1fr 1fr;
+  }
+}
