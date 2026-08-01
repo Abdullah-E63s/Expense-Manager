@@ -31,33 +31,25 @@ const INJECT_ON_LOAD = `
 
     // 2. Intercept the web app's Google button click → tell React Native to
     //    handle it natively (bypasses WebView Google auth restriction).
-    // Event delegation (Capture Phase)
-    document.addEventListener('click', function(e) {
-      var target = e.target;
-      while (target && target !== document) {
-        if (target.id === 'google-login-btn' || target.id === 'google-signin-btn' || target.classList.contains('google-btn')) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          window.ReactNativeWebView.postMessage(
-            JSON.stringify({ type: 'GOOGLE_SIGN_IN_CLICKED' })
-          );
-          return;
+    // 2. Intercept the web app's Google button click via document delegation
+    //    so it works even if the button loads late.
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('#google-login-btn') || e.target.closest('#google-signin-btn');
+      if (btn) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        try {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'GOOGLE_SIGN_IN_CLICKED' }));
+          } else {
+            alert('Error: window.ReactNativeWebView is not available!');
+          }
+        } catch(err) {
+          alert('PostMessage error: ' + err.message);
         }
-        target = target.parentNode;
       }
-    }, true);
-
-    // Prevent Google from rendering the iframe if the library loads
-    var checkGoogle = setInterval(function() {
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.renderButton = function(container, options) {
-           // Do nothing, we want to keep the HTML button so our click listener above works!
-           console.log("WebView Intercepted renderButton! Iframe blocked.");
-        };
-        clearInterval(checkGoogle);
-      }
-    }, 100);
+    }, true); // Use capture phase to intercept before anything else
 
     // 3. Intercept /api/auth/google fetch response to force redirect → /dashboard.
     //    Backend returns redirect:"/" which shows login page again — override it.
