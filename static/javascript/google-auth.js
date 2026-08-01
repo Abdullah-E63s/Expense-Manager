@@ -273,3 +273,6 @@ async function handleCredentialResponse(response) {
         }
     }
 }
+
+// Expose globally for React Native WebView injection
+window.handleCredentialResponse = handleCredentialResponse;

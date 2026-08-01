@@ -82,32 +82,36 @@ const INJECT_ON_LOAD = `
 function buildTokenInjection(idToken) {
   const safe = idToken.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   return `
-    (function () {
-      var token = '${safe}';
-
+    (function() {
+      const token = '${safe}';
+      
       // Preferred: reuse the web app's existing auth handler
-      if (typeof handleCredentialResponse === 'function') {
-        handleCredentialResponse({ credential: token });
+      if (typeof window.handleCredentialResponse === 'function') {
+        window.handleCredentialResponse({ credential: token });
         return;
       }
 
-      // Fallback: direct fetch (WebView has session cookie jar)
-      var csrfMeta = document.querySelector('meta[name="csrf-token"]');
-      var csrf = csrfMeta ? csrfMeta.getAttribute('content') : '';
-
-      fetch('/api/auth/google', {
+      // Fallback: manually POST to the backend
+      fetch('${BASE_URL}/api/auth/google', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
-        body: JSON.stringify({ id_token: token, _csrf: csrf }),
+        body: JSON.stringify({ id_token: token })
       })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          window.location.href = (data && data.redirect) ? data.redirect : '/dashboard';
-        })
-        .catch(function () {
-          window.location.href = '/dashboard';
-        });
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '${BASE_URL}/dashboard';
+        } else {
+          alert('Backend Google Auth failed: ' + JSON.stringify(data));
+        }
+      })
+      .catch(err => {
+          alert('Network error during Google Auth fallback: ' + err.message);
+          console.error(err);
+      });
     })();
     true;
   `;
