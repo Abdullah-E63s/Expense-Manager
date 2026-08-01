@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Expense Manager",
+    "slug": "expense-manager-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#070d1a",
+    "scheme": "expensemanager",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Expense Manager to access your camera to scan receipts."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Expense Manager to access your photos to upload receipts."
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.expensemanager.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#070d1a",
+        "foregroundImage": "./assets/icon.png"
+      },
+      "package": "com.expensemanager.mobile"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
