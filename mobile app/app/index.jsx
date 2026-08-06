@@ -13,7 +13,9 @@ WebBrowser.maybeCompleteAuthSession();
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'https://expense-manager-ubm8.vercel.app';
 
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+const GOOGLE_WEB_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const GOOGLE_IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 
 // ── Scripts injected into the WebView on every page load ──────────────────────
 const INJECT_ON_LOAD = `
@@ -99,20 +101,15 @@ function buildTokenInjection(idToken) {
         body: JSON.stringify({ id_token: token })
       })
       .then(res => res.json())
-      .then(async data => {
+      .then(data => {
         if (data.success) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Test if session cookie works
-          try {
-             const profileRes = await fetch('${BASE_URL}/api/auth/account/profile', { credentials: 'include' });
-             const profileData = await profileRes.json();
-             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG_LOG', msg: 'Profile after auth: ' + JSON.stringify(profileData) }));
-          } catch (e) {
-             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'DEBUG_LOG', msg: 'Profile fetch error: ' + e.message }));
-          }
-
-          window.location.replace('${BASE_URL}/dashboard');
+          // Signal native side to navigate — avoids JS-fetch → JS-navigate cookie
+          // timing race.  The native onMessage handler waits 300 ms and then
+          // injects window.location.replace, by which point the native cookie
+          // store has committed the session Set-Cookie from this fetch response.
+          window.ReactNativeWebView.postMessage(
+            JSON.stringify({ type: 'AUTH_SUCCESS', url: '${BASE_URL}/dashboard' })
+          );
         } else {
           alert('Backend Google Auth failed: ' + JSON.stringify(data));
         }
@@ -135,11 +132,10 @@ export default function App() {
   
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
+    ...(GOOGLE_ANDROID_CLIENT_ID && { androidClientId: GOOGLE_ANDROID_CLIENT_ID }),
+    ...(GOOGLE_IOS_CLIENT_ID     && { iosClientId: GOOGLE_IOS_CLIENT_ID }),
     responseType: 'id_token',
     redirectUri,
-    // Uncomment when you have native OAuth client IDs from Google Cloud Console:
-    // androidClientId: 'REPLACE_WITH_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-    // iosClientId:     'REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com',
   });
 
   // ── Handle OAuth response ─────────────────────────────────────────────────
@@ -172,8 +168,22 @@ export default function App() {
         if (!request || isAuthenticating) return;
         setIsAuthenticating(true);
         await promptAsync();
+
+      } else if (msg.type === 'AUTH_SUCCESS') {
+        // Auth completed; navigate to dashboard via native-injected JS.
+        // Waiting here (after the bridge roundtrip) gives the native cookie store
+        // (Android CookieManager / iOS WKHTTPCookieStore) time to commit the
+        // session Set-Cookie that was received during the auth fetch, so the
+        // subsequent GET /dashboard request arrives with the session cookie.
+        const target = msg.url || (BASE_URL + '/dashboard');
+        setTimeout(() => {
+          webviewRef.current?.injectJavaScript(
+            `window.location.replace(${JSON.stringify(target)}); true;`
+          );
+        }, 300);
+
       } else if (msg.type === 'DEBUG_LOG') {
-        alert(msg.msg);
+        console.log('[WebView]', msg.msg);
       }
     } catch (_) {}
   };

@@ -257,16 +257,19 @@ async function handleCredentialResponse(response) {
             try { localStorage.setItem('user', JSON.stringify(data.user)); } catch (_) {}
         }
 
-        // Give WebView native cookie engine a brief moment to commit Set-Cookie
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        // Debug: Log cookies before redirecting
-        if (window.ReactNativeWebView) {
-            alert('Cookies before redirect: ' + document.cookie);
-        }
-
         const target = data.redirect || '/dashboard';
-        window.location.replace(target);
+
+        if (window.ReactNativeWebView) {
+            // In the mobile WebView, route navigation through the native bridge.
+            // This ensures the native cookie store has committed the session cookie
+            // before the GET /dashboard request fires, avoiding the timing race
+            // that causes the dark/blank screen.
+            window.ReactNativeWebView.postMessage(
+                JSON.stringify({ type: 'AUTH_SUCCESS', url: target })
+            );
+        } else {
+            window.location.replace(target);
+        }
 
     } catch (error) {
         console.error('Google Sign-In error:', error);
