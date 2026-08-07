@@ -1228,7 +1228,108 @@ def google_sign_in():
             'error_type': 'ServerError',
             'message': f'An unexpected error occurred: {error_msg}'
         }), 500
-        
+
+
+@auth_bp.route("/google/mobile", methods=["GET"])
+def google_mobile_auth():
+    """Initiate Google OAuth for Expo Go (Chrome Custom Tab flow).
+
+    The Expo app opens this URL in a Chrome Custom Tab via
+    WebBrowser.openAuthSessionAsync.  We redirect straight to Google's
+    consent screen; Google then calls /api/auth/google/mobile-callback.
+
+    IMPORTANT: Add the callback URL below to "Authorized redirect URIs" in
+    Google Cloud Console for the web OAuth client:
+        https://expense-manager-ubm8.vercel.app/api/auth/google/mobile-callback
+    """
+    import urllib.parse
+
+    client_id = current_app.config.get('GOOGLE_CLIENT_ID', '')
+    callback_url = os.environ.get(
+        'GOOGLE_MOBILE_REDIRECT_URI',
+        'https://expense-manager-ubm8.vercel.app/api/auth/google/mobile-callback'
+    )
+
+    params = urllib.parse.urlencode({
+        'client_id': client_id,
+        'redirect_uri': callback_url,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'access_type': 'online',
+        'prompt': 'select_account',
+    })
+
+    auth_url = f'https://accounts.google.com/o/oauth2/v2/auth?{params}'
+    return redirect(auth_url)
+
+
+@auth_bp.route("/google/mobile-callback", methods=["GET"])
+def google_mobile_callback():
+    """Handle Google OAuth callback for Expo Go.
+
+    Exchanges the authorization code for an id_token, then redirects back
+    to the app via the expensemanager:// custom URL scheme.  Chrome Custom Tab
+    detects this scheme and hands control back to Expo Go, where
+    WebBrowser.openAuthSessionAsync resolves with the result URL.
+
+    The app then extracts the id_token and passes it to the existing
+    POST /api/auth/google endpoint (via WebView JS injection) to create the
+    user session.
+    """
+    import urllib.parse
+
+    error = request.args.get('error')
+    if error:
+        current_app.logger.warning(f'Mobile OAuth error from Google: {error}')
+        return redirect(f'expensemanager://auth-error?error={urllib.parse.quote(error)}')
+
+    code = request.args.get('code')
+    if not code:
+        return redirect('expensemanager://auth-error?error=missing_code')
+
+    client_id = current_app.config.get('GOOGLE_CLIENT_ID', '')
+    client_secret = current_app.config.get('GOOGLE_CLIENT_SECRET', '')
+    callback_url = os.environ.get(
+        'GOOGLE_MOBILE_REDIRECT_URI',
+        'https://expense-manager-ubm8.vercel.app/api/auth/google/mobile-callback'
+    )
+
+    if not client_secret:
+        current_app.logger.error('Mobile OAuth: GOOGLE_CLIENT_SECRET not configured')
+        return redirect('expensemanager://auth-error?error=server_config_missing')
+
+    try:
+        token_resp = requests.post(
+            'https://oauth2.googleapis.com/token',
+            data={
+                'code': code,
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'redirect_uri': callback_url,
+                'grant_type': 'authorization_code',
+            },
+            timeout=10,
+        )
+        tokens = token_resp.json()
+        id_token_str = tokens.get('id_token', '')
+
+        if not id_token_str:
+            current_app.logger.error(
+                f'Mobile OAuth: token exchange failed — {tokens}'
+            )
+            return redirect('expensemanager://auth-error?error=token_exchange_failed')
+
+        # Return id_token to the Expo app via custom scheme.
+        # The app injects it into the WebView → POST /api/auth/google → session set.
+        encoded = urllib.parse.quote(id_token_str, safe='')
+        return redirect(f'expensemanager://auth?id_token={encoded}')
+
+    except Exception as exc:
+        current_app.logger.error(f'Mobile OAuth callback error: {exc}', exc_info=True)
+        safe_err = urllib.parse.quote(str(exc)[:200], safe='')
+        return redirect(f'expensemanager://auth-error?error={safe_err}')
+
+
 @auth_bp.route("/set-password", methods=["GET", "POST"])
 @login_required
 def set_password():

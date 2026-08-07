@@ -1,8 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { StyleSheet, StatusBar, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 
 // Required for expo-auth-session to complete OAuth redirect back to app
@@ -12,9 +11,8 @@ WebBrowser.maybeCompleteAuthSession();
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'https://expense-manager-ubm8.vercel.app';
 
-const GOOGLE_WEB_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
-const GOOGLE_IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+// Google OAuth is handled by the backend (/api/auth/google/mobile).
+// No native client IDs required for the Expo Go flow.
 
 // ── Scripts injected into the WebView on every page load ──────────────────────
 const INJECT_ON_LOAD = `
@@ -127,47 +125,54 @@ export default function App() {
   const webviewRef = useRef(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_WEB_CLIENT_ID,
-    ...(GOOGLE_ANDROID_CLIENT_ID && { androidClientId: GOOGLE_ANDROID_CLIENT_ID }),
-    ...(GOOGLE_IOS_CLIENT_ID     && { iosClientId: GOOGLE_IOS_CLIENT_ID }),
-    // No redirectUri override — the Google provider auto-generates the correct
-    // reversed-scheme URI (com.googleusercontent.apps.CLIENT_ID:/oauth2redirect/google)
-    // which Google accepts automatically for Android/iOS OAuth clients.
-    // No responseType override — authorization code flow is selected automatically
-    // for native client IDs (more reliable than deprecated id_token implicit flow).
-  });
+  // ── Google Sign-In via backend OAuth flow (Expo Go compatible) ───────────
+  // Opens BASE_URL/api/auth/google/mobile in a Chrome Custom Tab.
+  // The backend exchanges the Google auth code for an id_token, then
+  // redirects to expensemanager://auth?id_token=... which Chrome Custom Tab
+  // hands back to this app (Expo Go registers the expensemanager:// scheme
+  // from app.json, so this works on physical devices without a dev build).
+  const handleGoogleSignIn = async () => {
+    if (isAuthenticating) return;
+    setIsAuthenticating(true);
 
-  // ── Handle OAuth response ─────────────────────────────────────────────────
-  useEffect(() => {
-    if (!response) return;
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(
+        `${BASE_URL}/api/auth/google/mobile`,
+        'expensemanager://'  // Intercept this scheme when Chrome Tab redirects back
+      );
 
-    if (response.type === 'success') {
-      const idToken = response.params?.id_token || response.authentication?.idToken;
-      
-      if (idToken) {
-        webviewRef.current?.injectJavaScript(buildTokenInjection(idToken));
-      } else {
-        alert("Google auth succeeded but no id_token was found in response! Response: " + JSON.stringify(response));
+      if (result.type === 'success' && result.url) {
+        // Extract id_token from: expensemanager://auth?id_token=xxx
+        const match = result.url.match(/[?&]id_token=([^&]+)/);
+        const idToken = match ? decodeURIComponent(match[1]) : null;
+
+        if (idToken) {
+          // Hand off to existing injection flow → POST /api/auth/google →
+          // sets session cookie → signals AUTH_SUCCESS → navigates to dashboard
+          webviewRef.current?.injectJavaScript(buildTokenInjection(idToken));
+          return; // Navigation driven by AUTH_SUCCESS in onMessage below
+        }
+
+        const errMatch = result.url.match(/[?&]error=([^&]+)/);
+        const errMsg = errMatch ? decodeURIComponent(errMatch[1]) : 'unknown_error';
+        alert(`Google Sign-In failed: ${errMsg}`);
       }
-    } else {
-      if (response.type !== 'dismiss') {
-        alert("Google auth failed: " + JSON.stringify(response));
-      }
+      // result.type === 'cancel' / 'dismiss' → user closed tab, no alert needed
+    } catch (err) {
+      alert(`Google Sign-In error: ${err.message}`);
+    } finally {
+      setIsAuthenticating(false);
     }
-    setIsAuthenticating(false);
-  }, [response]);
+  };
 
   // ── WebView message handler ───────────────────────────────────────────────
   const onMessage = async (event) => {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
 
-      // Web app's Google button was clicked → trigger native OAuth
+      // Web app's Google button was clicked → open Chrome Custom Tab OAuth flow
       if (msg.type === 'GOOGLE_SIGN_IN_CLICKED') {
-        if (!request || isAuthenticating) return;
-        setIsAuthenticating(true);
-        await promptAsync();
+        handleGoogleSignIn();
 
       } else if (msg.type === 'AUTH_SUCCESS') {
         // Auth completed; navigate to dashboard via native-injected JS.
