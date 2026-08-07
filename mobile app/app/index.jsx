@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 
 // Required for expo-auth-session to complete OAuth redirect back to app
 WebBrowser.maybeCompleteAuthSession();
@@ -128,14 +127,15 @@ export default function App() {
   const webviewRef = useRef(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const redirectUri = AuthSession.makeRedirectUri();
-  
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
     ...(GOOGLE_ANDROID_CLIENT_ID && { androidClientId: GOOGLE_ANDROID_CLIENT_ID }),
     ...(GOOGLE_IOS_CLIENT_ID     && { iosClientId: GOOGLE_IOS_CLIENT_ID }),
-    responseType: 'id_token',
-    redirectUri,
+    // No redirectUri override — the Google provider auto-generates the correct
+    // reversed-scheme URI (com.googleusercontent.apps.CLIENT_ID:/oauth2redirect/google)
+    // which Google accepts automatically for Android/iOS OAuth clients.
+    // No responseType override — authorization code flow is selected automatically
+    // for native client IDs (more reliable than deprecated id_token implicit flow).
   });
 
   // ── Handle OAuth response ─────────────────────────────────────────────────
