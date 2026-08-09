@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { StyleSheet, StatusBar, Platform } from 'react-native';
+import React, { useRef, useState, useCallback } from 'react';
+import { StyleSheet, StatusBar, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import * as WebBrowser from 'expo-web-browser';
@@ -120,10 +120,26 @@ function buildTokenInjection(idToken) {
   `;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Component ────────────────────────────────────────────────────────────────
 export default function App() {
   const webviewRef = useRef(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // ── WebView source ─────────────────────────────────────────────────
+  // Using state-based navigation avoids the Android WebView black screen bug
+  // that occurs when window.location.replace() is injected after returning from
+  // Chrome Custom Tab — the native hardware rendering pipeline can get confused.
+  // Updating the source prop forces React Native to trigger a fresh native load.
+  const [webviewSource, setWebviewSource] = useState({
+    uri: BASE_URL,
+    headers: { 'X-Requested-With': '' },
+  });
+
+  // Navigate the WebView to a URL via state (avoids black-screen on Android)
+  const navigateTo = useCallback((url) => {
+    setWebviewSource({ uri: url, headers: { 'X-Requested-With': '' } });
+  }, []);
+
 
   // ── Google Sign-In via backend OAuth flow (Expo Go compatible) ───────────
   // Opens BASE_URL/api/auth/google/mobile in a Chrome Custom Tab.
@@ -165,7 +181,7 @@ export default function App() {
     }
   };
 
-  // ── WebView message handler ───────────────────────────────────────────────
+  // ── WebView message handler ───────────────────────────────────────────
   const onMessage = async (event) => {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
@@ -175,17 +191,12 @@ export default function App() {
         handleGoogleSignIn();
 
       } else if (msg.type === 'AUTH_SUCCESS') {
-        // Auth completed; navigate to dashboard via native-injected JS.
-        // Waiting here (after the bridge roundtrip) gives the native cookie store
-        // (Android CookieManager / iOS WKHTTPCookieStore) time to commit the
-        // session Set-Cookie that was received during the auth fetch, so the
-        // subsequent GET /dashboard request arrives with the session cookie.
+        // Auth completed. Use state-based navigation (setWebviewSource) instead of
+        // window.location.replace injection — this avoids the Android WebView black
+        // screen that appears when JS navigates the view after Chrome Custom Tab returns.
+        // The 300ms delay lets the native cookie store commit the session Set-Cookie.
         const target = msg.url || (BASE_URL + '/dashboard');
-        setTimeout(() => {
-          webviewRef.current?.injectJavaScript(
-            `window.location.replace(${JSON.stringify(target)}); true;`
-          );
-        }, 300);
+        setTimeout(() => navigateTo(target), 300);
 
       } else if (msg.type === 'DEBUG_LOG') {
         console.log('[WebView]', msg.msg);
@@ -197,13 +208,57 @@ export default function App() {
     // Navigation state monitoring if needed
   };
 
+  // ── HTTP / network error handlers ────────────────────────────────────
+  const [webviewError, setWebviewError] = useState(null);
+
+  const onHttpError = useCallback((synthEvent) => {
+    const { nativeEvent } = synthEvent;
+    // Only show error UI for non-API, non-static paths to avoid noise
+    const url = nativeEvent?.url || '';
+    if (!url.includes('/static/') && !url.includes('/api/')) {
+      setWebviewError({ url, statusCode: nativeEvent?.statusCode });
+    }
+  }, []);
+
+  const onError = useCallback((synthEvent) => {
+    const { nativeEvent } = synthEvent;
+    const desc = nativeEvent?.description || 'Unknown error';
+    // Ignore benign errors that happen during OAuth redirects
+    if (!desc.includes('net::ERR_ABORTED')) {
+      setWebviewError({ url: nativeEvent?.url, description: desc });
+    }
+  }, []);
+
+  const dismissError = useCallback(() => {
+    setWebviewError(null);
+    // Navigate back to home (login page) on error dismissal
+    navigateTo(BASE_URL);
+  }, [navigateTo]);
+
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0f" />
+
+      {/* HTTP / network error overlay */}
+      {webviewError && (
+        <View style={styles.errorOverlay}>
+          <Text style={styles.errorTitle}>⚠️ Page failed to load</Text>
+          <Text style={styles.errorDesc}>
+            {webviewError.statusCode
+              ? `HTTP ${webviewError.statusCode}`
+              : webviewError.description || 'Network error'}
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={dismissError}>
+            <Text style={styles.retryBtnText}>Return to Login</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <WebView
         ref={webviewRef}
-        source={{ uri: BASE_URL, headers: { 'X-Requested-With': '' } }}
+        source={webviewSource}
         style={styles.webview}
         javaScriptEnabled={true}
         domStorageEnabled={true}
@@ -216,6 +271,8 @@ export default function App() {
         onNavigationStateChange={onNavigationStateChange}
         injectedJavaScript={INJECT_ON_LOAD}
         onMessage={onMessage}
+        onHttpError={onHttpError}
+        onError={onError}
       />
     </SafeAreaView>
   );
@@ -234,4 +291,38 @@ const styles = StyleSheet.create({
     opacity: 0.99,
     overflow: 'hidden',
   },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#0a0a0f',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    zIndex: 10,
+  },
+  errorTitle: {
+    color: '#f87171',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  errorDesc: {
+    color: '#94a3b8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  retryBtn: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 10,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });
+

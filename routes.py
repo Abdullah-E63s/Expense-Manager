@@ -314,6 +314,18 @@ def home_page():
     return render_template("login.html")
 
 
+@pages_bp.get("/login")
+def login_page():
+    """/login is an alias for / — links in signup and forgot templates point here.
+
+    Without this route, navigating 'Back to Login' from signup or forgot-password
+    returns a 404 which Android WebView converts to ERR_HTTP_RESPONSE_CODE_FAILURE.
+    """
+    if session.get("user_id"):
+        return redirect(url_for("pages.dashboard"))
+    return render_template("login.html")
+
+
 @pages_bp.get("/dashboard")
 def dashboard():
     """Render the dashboard page for authenticated users."""
