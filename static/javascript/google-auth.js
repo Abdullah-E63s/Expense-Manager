@@ -259,17 +259,10 @@ async function handleCredentialResponse(response) {
 
         const target = data.redirect || '/dashboard';
 
-        if (window.ReactNativeWebView) {
-            // In the mobile WebView, route navigation through the native bridge.
-            // This ensures the native cookie store has committed the session cookie
-            // before the GET /dashboard request fires, avoiding the timing race
-            // that causes the dark/blank screen.
-            window.ReactNativeWebView.postMessage(
-                JSON.stringify({ type: 'AUTH_SUCCESS', url: target })
-            );
-        } else {
-            window.location.replace(target);
-        }
+        // Navigate directly via the browser exactly like email login does.
+        // Using the native bridge (AUTH_SUCCESS) and setWebviewSource caused
+        // a blank/black flash on Android hardware-accelerated WebViews.
+        window.location.href = target;
 
     } catch (error) {
         console.error('Google Sign-In error:', error);

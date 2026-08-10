@@ -80,42 +80,6 @@ const INJECT_ON_LOAD = `
   true;
 `;
 
-// ── Build JS to inject the Google id_token back into the page ──────────────────
-function buildTokenInjection(idToken) {
-  const safe = idToken.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  return `
-    (function() {
-      var token = '${safe}';
-
-      // Preferred: web app already exposes handleCredentialResponse globally
-      if (typeof window.handleCredentialResponse === 'function') {
-        window.handleCredentialResponse({ credential: token });
-        return;
-      }
-
-      // Fallback: POST directly to the backend auth endpoint
-      fetch('${BASE_URL}/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ id_token: token })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data && data.success) {
-          window.ReactNativeWebView.postMessage(
-            JSON.stringify({ type: 'AUTH_SUCCESS', url: '${BASE_URL}/dashboard' })
-          );
-        } else {
-          alert('Sign-in failed: ' + JSON.stringify(data));
-        }
-      })
-      .catch(function(err) { alert('Auth error: ' + err.message); });
-    })();
-    true;
-  `;
-}
-
 // ── Component ──────────────────────────────────────────────────────────────────
 export default function App() {
   const webviewRef = useRef(null);
@@ -150,21 +114,6 @@ export default function App() {
       if (msg.type === 'GOOGLE_SIGN_IN_CLICKED') {
         // Google button tapped → start in-WebView OAuth flow
         handleGoogleSignIn();
-
-      } else if (msg.type === 'GOOGLE_TOKEN') {
-        // Callback page sent us an id_token from the URL fragment.
-        // Inject it into the (now-callback) page so it POSTs to /api/auth/google.
-        if (msg.id_token) {
-          webviewRef.current?.injectJavaScript(buildTokenInjection(msg.id_token));
-        } else {
-          alert('Google sign-in failed: ' + (msg.error || 'No token received'));
-          navigateTo(BASE_URL); // Go back to login
-        }
-
-      } else if (msg.type === 'AUTH_SUCCESS') {
-        // Session is set. Navigate to dashboard via state (avoids black screen).
-        const target = msg.url || `${BASE_URL}/dashboard`;
-        setTimeout(() => navigateTo(target), 300);
 
       } else if (msg.type === 'GOOGLE_AUTH_BLOCKED') {
         // Google blocked the OAuth in WebView (shows policy error page).
