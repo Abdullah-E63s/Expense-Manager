@@ -25,9 +25,35 @@ from models import init_db, User, execute_query, Database
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+
+class _SanitizeOriginMiddleware:
+    """WSGI middleware that strips newline characters from HTTP_ORIGIN.
+
+    Flask's before_request hooks are NOT called for 404 routes because
+    raise_routing_exception() fires before preprocess_request().  As a result
+    flask_cors tries to reflect a malformed Origin into the response headers
+    and raises:
+        ValueError: Header values must not contain newline characters.
+
+    By fixing the environ at the WSGI level (before Flask touches the request)
+    we prevent the crash for ALL requests, including unmatched routes.
+    This happens with external scanner/bot traffic that sends\r\n in Origin.
+    """
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        raw = environ.get('HTTP_ORIGIN', '')
+        if raw and ('\n' in raw or '\r' in raw):
+            environ['HTTP_ORIGIN'] = raw.replace('\n', '').replace('\r', '').strip()
+        return self.wsgi_app(environ, start_response)
+
+
 # ── App factory ──────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+app.wsgi_app = _SanitizeOriginMiddleware(
+    ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+)
 app.config.from_object(get_config())
 
 # Ensure session cookie settings are explicitly set
@@ -264,19 +290,6 @@ def _versioned_url_for(endpoint, **values):
 
 
 # ── Request lifecycle hooks ───────────────────────────────────────────────────
-@app.before_request
-def sanitize_origin_header():
-    """Strip newline characters from the Origin header before flask_cors reads it.
-
-    Google's validation bots and some security scanners send malformed Origin
-    headers containing \\r\\n, which causes flask_cors to raise:
-        ValueError: Header values must not contain newline characters.
-    Mutating the WSGI environ here fixes it before any extension sees the value.
-    """
-    raw = request.environ.get('HTTP_ORIGIN', '')
-    if raw and ('\n' in raw or '\r' in raw):
-        request.environ['HTTP_ORIGIN'] = raw.replace('\n', '').replace('\r', '').strip()
-
 
 @app.after_request
 def add_security_headers(response):
