@@ -1359,11 +1359,14 @@ def google_mobile_callback():
       return;
     }}
 
-    // ---------- Apply SAME pattern as email login ----------
-    // login.js does:  fetch('/api/auth/login', {{body: {{email, password}}}})
-    //                 .then(() => window.location.href = '/dashboard')
+    // ---------- IDENTICAL to email login ----------
+    // login.js:  fetch('/api/auth/login', body)  →  window.location.href = '/dashboard'
+    // Here:      fetch('/api/auth/google', body)  →  window.location.href = '/dashboard'
     //
-    // We do exactly the same, just with id_token instead of email+password.
+    // NO native bridge (postMessage / AUTH_SUCCESS) — that caused a black screen
+    // because setWebviewSource() from native side flashes blank on Android.
+    // window.location.href is a regular in-page navigation and renders smoothly,
+    // exactly like email login.
     fetch('/api/auth/google', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
@@ -1373,18 +1376,8 @@ def google_mobile_callback():
     .then(function(r) {{ return r.json(); }})
     .then(function(data) {{
       if (data && data.success) {{
-        // ✅ Logged in — navigate to dashboard
-        if (window.ReactNativeWebView) {{
-          // Inside Expo WebView: use native bridge for state-based navigation
-          // (avoids Android black screen on hardware-accelerated views)
-          window.ReactNativeWebView.postMessage(JSON.stringify({{
-            type: 'AUTH_SUCCESS',
-            url: data.redirect || '/dashboard'
-          }}));
-        }} else {{
-          // Regular browser or web: simple redirect, same as email login
-          window.location.href = data.redirect || '/dashboard';
-        }}
+        // ✅ Session set — navigate exactly like email login does
+        window.location.href = data.redirect || '/dashboard';
       }} else {{
         var errMsg = (data && (data.error || data.message)) || 'Sign-in failed';
         document.getElementById('msg').className = 'err';
