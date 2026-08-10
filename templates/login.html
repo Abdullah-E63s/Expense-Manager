@@ -93,9 +93,9 @@
         </div>
     </div>
 
-    <script type="module" src="/static/javascript/google-auth.js" defer></script>
-    <script type="module" src="/static/javascript/utils.js" defer></script>
-    <script type="module" src="/static/javascript/login.js" defer></script>
+    <script type="module" src="{{ url_for('static', filename='javascript/google-auth.js') }}" defer></script>
+    <script type="module" src="{{ url_for('static', filename='javascript/utils.js') }}" defer></script>
+    <script type="module" src="{{ url_for('static', filename='javascript/login.js') }}" defer></script>
     <input type="hidden" id="recaptcha-token" name="recaptcha_token">
 
 
