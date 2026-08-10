@@ -1244,169 +1244,147 @@ def google_sign_in():
 
 @auth_bp.route("/google/mobile", methods=["GET"])
 def google_mobile_auth():
-    """Initiate Google OAuth for Expo Go (Chrome Custom Tab flow).
+    """Initiate Google OAuth for Expo Go using the implicit (id_token) flow.
 
-    The Expo app opens this URL in a Chrome Custom Tab via
-    WebBrowser.openAuthSessionAsync.  We redirect straight to Google's
-    consent screen; Google then calls /api/auth/google/mobile-callback.
+    The Expo app navigates the main WebView to this URL.  We redirect straight
+    to Google's consent screen.  Google then redirects to /api/auth/google/mobile-callback
+    with the id_token in the URL **fragment** (not query params, so it never
+    reaches the server).  The callback page's JavaScript reads the fragment
+    and posts the token via window.ReactNativeWebView.postMessage.
 
-    IMPORTANT: Add the callback URL below to "Authorized redirect URIs" in
-    Google Cloud Console for the web OAuth client:
+    Implicit flow does NOT require GOOGLE_CLIENT_SECRET — it sends the
+    id_token directly to the browser/WebView.
+
+    Required in Google Cloud Console → OAuth client → Authorized redirect URIs:
         https://expense-manager-ubm8.vercel.app/api/auth/google/mobile-callback
     """
-    import urllib.parse
+    import urllib.parse, secrets as _secrets
 
     client_id = current_app.config.get('GOOGLE_CLIENT_ID', '')
     if not client_id:
-        return '<h2>Server configuration error: GOOGLE_CLIENT_ID not set.</h2>', 500
+        return '<h2 style="font-family:sans-serif;color:red">GOOGLE_CLIENT_ID not configured on server.</h2>', 500
 
     callback_url = os.environ.get(
         'GOOGLE_MOBILE_REDIRECT_URI',
         'https://expense-manager-ubm8.vercel.app/api/auth/google/mobile-callback'
     )
 
+    # nonce is required for response_type=id_token (implicit flow)
+    nonce = _secrets.token_hex(16)
+
     params = urllib.parse.urlencode({
         'client_id': client_id,
         'redirect_uri': callback_url,
-        'response_type': 'code',
+        'response_type': 'id_token',   # ← implicit flow, no code exchange needed
         'scope': 'openid email profile',
-        'access_type': 'online',
+        'nonce': nonce,
         'prompt': 'select_account',
     })
 
     auth_url = f'https://accounts.google.com/o/oauth2/v2/auth?{params}'
+    current_app.logger.info(f'Mobile OAuth (implicit) → redirecting to Google')
     return redirect(auth_url)
-
-
-def _mobile_app_redirect(app_url: str, message: str = 'Redirecting to app\u2026') -> str:
-    """Return an HTML page that navigates Chrome Custom Tab to a custom URL scheme.
-
-    Using window.location.replace() instead of an HTTP 302 redirect avoids
-    issues where Vercel / nginx strip non-http(s) Location headers, causing 500s.
-    Chrome Custom Tab executes the script immediately; WebBrowser.openAuthSessionAsync
-    detects the navigation to the 'expensemanager://' scheme and resolves.
-    """
-    safe = app_url.replace('"', '%22').replace('<', '%3C').replace('>', '%3E')
-    return f'''<!DOCTYPE html>
-<html lang="en"><head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Returning to app\u2026</title>
-  <script>window.location.replace("{safe}");</script>
-</head><body style="font-family:sans-serif;padding:2em;text-align:center">
-  <p>{message}</p>
-  <p><a href="{safe}">Tap here if not redirected automatically</a></p>
-</body></html>'''
 
 
 @auth_bp.route("/google/mobile-callback", methods=["GET"])
 def google_mobile_callback():
-    """Handle Google OAuth callback for Expo Go.
+    """Google OAuth callback for the Expo Go in-WebView implicit flow.
 
-    Exchanges the authorization code for an id_token, then navigates Chrome
-    Custom Tab to the expensemanager:// URL scheme via JavaScript (rather than
-    an HTTP 302) so that hosting infrastructure cannot strip the Location header.
+    With response_type=id_token, Google redirects to this URL with the
+    id_token in the URL fragment (#id_token=xxx), NOT in query params.
+    The fragment is never sent to the server — only the browser sees it.
 
-    WebBrowser.openAuthSessionAsync intercepts the scheme and resolves with
-    the full URL; the Expo app extracts the id_token and injects it into the
-    WebView to complete the session flow.
+    We return a pure HTML page.  Its JavaScript:
+      1. Reads the id_token from window.location.hash.
+      2. Posts it to the native layer via window.ReactNativeWebView.postMessage.
+         This works because the callback is loaded INSIDE the Expo WebView.
+      3. Falls back to the expensemanager:// scheme for any non-WebView context.
+
+    No GOOGLE_CLIENT_SECRET is required — there is no server-side token exchange.
     """
-    import urllib.parse
+    # For the implicit flow the server receives no useful query params.
+    # All work is done client-side in the JS below.
+    # We do surface any error= query param Google may include on failure.
+    error = request.args.get('error', '')
+    error_desc = request.args.get('error_description', error)
 
-    try:
-        error = request.args.get('error')
-        if error:
-            current_app.logger.warning(f'Mobile OAuth — Google returned error: {error}')
-            return _mobile_app_redirect(
-                f'expensemanager://auth-error?error={urllib.parse.quote(error, safe="")}',
-                f'Google Sign-In error: {error}'
-            )
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Signing in\u2026</title>
+  <style>
+    body{{margin:0;background:#0a0a0f;color:#e2e8f0;font-family:sans-serif;
+         display:flex;flex-direction:column;align-items:center;
+         justify-content:center;min-height:100vh;text-align:center;padding:2em}}
+    p{{margin:.5em 0;font-size:.95em;color:#94a3b8}}
+  </style>
+</head>
+<body>
+  <p id="msg">Completing sign-in\u2026</p>
+  <script>
+  (function() {{
+    // Surface any error Google returned in the query string
+    var queryError = {repr(error_desc)};
+    if (queryError) {{
+      if (window.ReactNativeWebView) {{
+        window.ReactNativeWebView.postMessage(JSON.stringify({{
+          type: 'GOOGLE_TOKEN',
+          id_token: null,
+          error: 'Google returned error: ' + queryError
+        }}));
+      }} else {{
+        document.getElementById('msg').textContent = 'Sign-in error: ' + queryError;
+      }}
+      return;
+    }}
 
-        code = request.args.get('code')
-        if not code:
-            current_app.logger.error('Mobile OAuth callback: no code in request')
-            return _mobile_app_redirect(
-                'expensemanager://auth-error?error=missing_code',
-                'Sign-In failed: no authorisation code received.'
-            )
+    // Read the id_token from the URL fragment (#id_token=xxx&...)
+    var hash = window.location.hash.substring(1);  // remove leading #
+    var params = {{}};
+    hash.split('&').forEach(function(pair) {{
+      var kv = pair.split('=');
+      if (kv[0]) params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+    }});
 
-        client_id = current_app.config.get('GOOGLE_CLIENT_ID', '')
-        client_secret = current_app.config.get('GOOGLE_CLIENT_SECRET', '')
-        callback_url = os.environ.get(
-            'GOOGLE_MOBILE_REDIRECT_URI',
-            'https://expense-manager-ubm8.vercel.app/api/auth/google/mobile-callback'
-        )
+    var idToken = params['id_token'];
+    var fragError = params['error'];
 
-        if not client_secret:
-            current_app.logger.error(
-                'Mobile OAuth: GOOGLE_CLIENT_SECRET is not set in the production environment. '
-                'Add it as an environment variable in Vercel / HF Space settings.'
-            )
-            return (
-                '<h2 style="font-family:sans-serif;color:red">Server error</h2>'
-                '<p style="font-family:sans-serif">'
-                'GOOGLE_CLIENT_SECRET is not configured on the server.<br>'
-                'Please add it to your Vercel environment variables and redeploy.</p>'
-            ), 500
+    if (idToken) {{
+      if (window.ReactNativeWebView) {{
+        // ✅ Running inside the Expo WebView → post token to native handler
+        window.ReactNativeWebView.postMessage(JSON.stringify({{
+          type: 'GOOGLE_TOKEN',
+          id_token: idToken
+        }}));
+        document.getElementById('msg').textContent = 'Sign-in complete!';
+      }} else {{
+        // Fallback: redirect via custom scheme (for any non-WebView context)
+        window.location.replace('expensemanager://auth?id_token=' + encodeURIComponent(idToken));
+      }}
+    }} else if (fragError) {{
+      var msg = params['error_description'] || fragError;
+      if (window.ReactNativeWebView) {{
+        window.ReactNativeWebView.postMessage(JSON.stringify({{
+          type: 'GOOGLE_TOKEN',
+          id_token: null,
+          error: msg
+        }}));
+      }} else {{
+        document.getElementById('msg').textContent = 'Sign-in error: ' + msg;
+      }}
+    }} else {{
+      // Page may have been opened directly without a fragment
+      document.getElementById('msg').textContent =
+        'No token received. Please go back and try again.';
+    }}
+  }})();
+  </script>
+</body>
+</html>'''
 
-        # Exchange the authorisation code for tokens
-        token_resp = requests.post(
-            'https://oauth2.googleapis.com/token',
-            data={
-                'code': code,
-                'client_id': client_id,
-                'client_secret': client_secret,
-                'redirect_uri': callback_url,
-                'grant_type': 'authorization_code',
-            },
-            timeout=15,
-        )
-
-        tokens = token_resp.json()
-        current_app.logger.info(
-            f'Mobile OAuth token exchange status={token_resp.status_code} '
-            f'keys={list(tokens.keys())}'
-        )
-
-        google_error = tokens.get('error')
-        if google_error:
-            current_app.logger.error(
-                f'Mobile OAuth: Google token exchange error: {tokens}'
-            )
-            err_desc = tokens.get('error_description', google_error)
-            return _mobile_app_redirect(
-                f'expensemanager://auth-error?error={urllib.parse.quote(err_desc, safe="")}',
-                f'Google Sign-In failed: {err_desc}'
-            )
-
-        id_token_str = tokens.get('id_token', '')
-        if not id_token_str:
-            current_app.logger.error(
-                f'Mobile OAuth: no id_token in response — {tokens}'
-            )
-            return _mobile_app_redirect(
-                'expensemanager://auth-error?error=no_id_token',
-                'Sign-In failed: no id_token in token response.'
-            )
-
-        # Hand the id_token back to the Expo app via its custom URL scheme.
-        # The JS in _mobile_app_redirect() navigates Chrome Custom Tab to the
-        # expensemanager:// URL; openAuthSessionAsync intercepts it.
-        encoded = urllib.parse.quote(id_token_str, safe='')
-        return _mobile_app_redirect(
-            f'expensemanager://auth?id_token={encoded}',
-            'Sign-In successful. Returning to app\u2026'
-        )
-
-    except Exception as exc:
-        current_app.logger.error(
-            f'Mobile OAuth callback unhandled error: {exc}', exc_info=True
-        )
-        return (
-            f'<h2 style="font-family:sans-serif;color:red">Sign-In error</h2>'
-            f'<p style="font-family:sans-serif">{str(exc)}</p>'
-        ), 500
-
+    return html, 200
 
 @auth_bp.route("/set-password", methods=["GET", "POST"])
 @login_required

@@ -1,20 +1,37 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { StyleSheet, StatusBar, Platform, Text, TouchableOpacity, View } from 'react-native';
+/**
+ * index.jsx — Expense Manager Mobile App
+ *
+ * Google Sign-In strategy (Expo Go compatible, no custom scheme needed):
+ *
+ *   1. User taps "Sign in with Google" on the login page.
+ *   2. INJECT_ON_LOAD intercepts the click and posts GOOGLE_SIGN_IN_CLICKED.
+ *   3. Native handler calls handleGoogleSignIn(), which navigates the MAIN
+ *      WebView to /api/auth/google/mobile (implicit-flow OAuth, no client_secret).
+ *   4. WebView follows Google's redirect: login page → accounts.google.com → callback.
+ *   5. The callback page's JS reads the id_token from the URL fragment and
+ *      calls window.ReactNativeWebView.postMessage({type:'GOOGLE_TOKEN', ...}).
+ *      This works because the callback is loaded INSIDE our WebView.
+ *   6. Native receives GOOGLE_TOKEN, injects buildTokenInjection(idToken).
+ *   7. The injected script POSTs to /api/auth/google (existing endpoint),
+ *      gets a session cookie, then posts AUTH_SUCCESS to native.
+ *   8. Native navigates to dashboard via setWebviewSource (avoids black screen).
+ */
+
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import {
+  StyleSheet, StatusBar, Platform, Text, TouchableOpacity, View, ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import * as WebBrowser from 'expo-web-browser';
 
-// Required for expo-auth-session to complete OAuth redirect back to app
-WebBrowser.maybeCompleteAuthSession();
-
-// ── Config ────────────────────────────────────────────────────────────────────
+// ── Config ─────────────────────────────────────────────────────────────────────
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'https://expense-manager-ubm8.vercel.app';
 
-// Google OAuth is handled by the backend (/api/auth/google/mobile).
-// No native client IDs required for the Expo Go flow.
+// URL that kicks off the Google implicit-flow OAuth in the main WebView.
+const GOOGLE_MOBILE_AUTH_URL = `${BASE_URL}/api/auth/google/mobile`;
 
-// ── Scripts injected into the WebView on every page load ──────────────────────
+// ── Scripts injected into the WebView on every page load ───────────────────────
 const INJECT_ON_LOAD = `
   (function () {
     'use strict';
@@ -28,30 +45,20 @@ const INJECT_ON_LOAD = `
     }
     meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
 
-    // 2. Intercept the web app's Google button click → tell React Native to
-    //    handle it natively (bypasses WebView Google auth restriction).
-    // 2. Intercept the web app's Google button click via document delegation
-    //    so it works even if the button loads late.
+    // 2. Intercept Google Sign-In button click — delegate at document root so it
+    //    fires even if google-auth.js renders/replaces the button after load.
     document.addEventListener('click', function (e) {
       var btn = e.target.closest('#google-login-btn') || e.target.closest('#google-signin-btn');
       if (btn) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        
-        try {
-          if (window.ReactNativeWebView) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'GOOGLE_SIGN_IN_CLICKED' }));
-          } else {
-            alert('Error: window.ReactNativeWebView is not available!');
-          }
-        } catch(err) {
-          alert('PostMessage error: ' + err.message);
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'GOOGLE_SIGN_IN_CLICKED' }));
         }
       }
-    }, true); // Use capture phase to intercept before anything else
+    }, true); // capture phase — fires before any bubble-phase listener
 
-    // 3. Intercept /api/auth/google fetch response to force redirect → /dashboard.
-    //    Backend returns redirect:"/" which shows login page again — override it.
+    // 3. Intercept /api/auth/google fetch response and force redirect → /dashboard.
     var _origFetch = window.fetch;
     window.fetch = function () {
       var args = arguments;
@@ -61,9 +68,7 @@ const INJECT_ON_LOAD = `
           var _origJson = res.json.bind(res);
           res.json = function () {
             return _origJson().then(function (data) {
-              if (data && data.success) {
-                data.redirect = '/dashboard';
-              }
+              if (data && data.success) { data.redirect = '/dashboard'; }
               return data;
             });
           };
@@ -75,188 +80,174 @@ const INJECT_ON_LOAD = `
   true;
 `;
 
-// ── Build JS to inject the Google id_token back into the WebView ──────────────
+// ── Build JS to inject the Google id_token back into the page ──────────────────
 function buildTokenInjection(idToken) {
   const safe = idToken.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   return `
     (function() {
-      const token = '${safe}';
-      
-      // Preferred: reuse the web app's existing auth handler
+      var token = '${safe}';
+
+      // Preferred: web app already exposes handleCredentialResponse globally
       if (typeof window.handleCredentialResponse === 'function') {
         window.handleCredentialResponse({ credential: token });
         return;
       }
 
-      // Fallback: manually POST to the backend
+      // Fallback: POST directly to the backend auth endpoint
       fetch('${BASE_URL}/api/auth/google', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ id_token: token })
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          // Signal native side to navigate — avoids JS-fetch → JS-navigate cookie
-          // timing race.  The native onMessage handler waits 300 ms and then
-          // injects window.location.replace, by which point the native cookie
-          // store has committed the session Set-Cookie from this fetch response.
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.success) {
           window.ReactNativeWebView.postMessage(
             JSON.stringify({ type: 'AUTH_SUCCESS', url: '${BASE_URL}/dashboard' })
           );
         } else {
-          alert('Backend Google Auth failed: ' + JSON.stringify(data));
+          alert('Sign-in failed: ' + JSON.stringify(data));
         }
       })
-      .catch(err => {
-          alert('Network error during Google Auth fallback: ' + err.message);
-          console.error(err);
-      });
+      .catch(function(err) { alert('Auth error: ' + err.message); });
     })();
     true;
   `;
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Component ──────────────────────────────────────────────────────────────────
 export default function App() {
   const webviewRef = useRef(null);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // ── WebView source ─────────────────────────────────────────────────
-  // Using state-based navigation avoids the Android WebView black screen bug
-  // that occurs when window.location.replace() is injected after returning from
-  // Chrome Custom Tab — the native hardware rendering pipeline can get confused.
-  // Updating the source prop forces React Native to trigger a fresh native load.
+  // ── State-based navigation ─────────────────────────────────────────────────
+  // Updating source via state triggers a proper native URL load, avoiding the
+  // Android WebView black screen that appears after JS window.location.replace().
   const [webviewSource, setWebviewSource] = useState({
     uri: BASE_URL,
     headers: { 'X-Requested-With': '' },
   });
 
-  // Navigate the WebView to a URL via state (avoids black-screen on Android)
   const navigateTo = useCallback((url) => {
     setWebviewSource({ uri: url, headers: { 'X-Requested-With': '' } });
   }, []);
 
+  // ── Google Sign-In (WebView-internal flow) ─────────────────────────────────
+  // Navigate the main WebView to the backend OAuth endpoint.
+  // The backend uses Google's implicit flow (response_type=id_token), which
+  // returns the id_token in the URL fragment so no client_secret is needed.
+  // After Google auth, the callback page reads the fragment and posts
+  // GOOGLE_TOKEN to native via window.ReactNativeWebView.postMessage().
+  const handleGoogleSignIn = useCallback(() => {
+    navigateTo(GOOGLE_MOBILE_AUTH_URL);
+  }, [navigateTo]);
 
-  // ── Google Sign-In via backend OAuth flow (Expo Go compatible) ───────────
-  // Opens BASE_URL/api/auth/google/mobile in a Chrome Custom Tab.
-  // The backend exchanges the Google auth code for an id_token, then
-  // redirects to expensemanager://auth?id_token=... which Chrome Custom Tab
-  // hands back to this app (Expo Go registers the expensemanager:// scheme
-  // from app.json, so this works on physical devices without a dev build).
-  const handleGoogleSignIn = async () => {
-    if (isAuthenticating) return;
-    setIsAuthenticating(true);
-
-    try {
-      const result = await WebBrowser.openAuthSessionAsync(
-        `${BASE_URL}/api/auth/google/mobile`,
-        'expensemanager://'  // Intercept this scheme when Chrome Tab redirects back
-      );
-
-      if (result.type === 'success' && result.url) {
-        // Extract id_token from: expensemanager://auth?id_token=xxx
-        const match = result.url.match(/[?&]id_token=([^&]+)/);
-        const idToken = match ? decodeURIComponent(match[1]) : null;
-
-        if (idToken) {
-          // Hand off to existing injection flow → POST /api/auth/google →
-          // sets session cookie → signals AUTH_SUCCESS → navigates to dashboard
-          webviewRef.current?.injectJavaScript(buildTokenInjection(idToken));
-          return; // Navigation driven by AUTH_SUCCESS in onMessage below
-        }
-
-        const errMatch = result.url.match(/[?&]error=([^&]+)/);
-        const errMsg = errMatch ? decodeURIComponent(errMatch[1]) : 'unknown_error';
-        alert(`Google Sign-In failed: ${errMsg}`);
-      }
-      // result.type === 'cancel' / 'dismiss' → user closed tab, no alert needed
-    } catch (err) {
-      alert(`Google Sign-In error: ${err.message}`);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
-
-  // ── WebView message handler ───────────────────────────────────────────
-  const onMessage = async (event) => {
+  // ── WebView message handler ────────────────────────────────────────────────
+  const onMessage = useCallback((event) => {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
 
-      // Web app's Google button was clicked → open Chrome Custom Tab OAuth flow
       if (msg.type === 'GOOGLE_SIGN_IN_CLICKED') {
+        // Google button tapped → start in-WebView OAuth flow
         handleGoogleSignIn();
 
+      } else if (msg.type === 'GOOGLE_TOKEN') {
+        // Callback page sent us an id_token from the URL fragment.
+        // Inject it into the (now-callback) page so it POSTs to /api/auth/google.
+        if (msg.id_token) {
+          webviewRef.current?.injectJavaScript(buildTokenInjection(msg.id_token));
+        } else {
+          alert('Google sign-in failed: ' + (msg.error || 'No token received'));
+          navigateTo(BASE_URL); // Go back to login
+        }
+
       } else if (msg.type === 'AUTH_SUCCESS') {
-        // Auth completed. Use state-based navigation (setWebviewSource) instead of
-        // window.location.replace injection — this avoids the Android WebView black
-        // screen that appears when JS navigates the view after Chrome Custom Tab returns.
-        // The 300ms delay lets the native cookie store commit the session Set-Cookie.
-        const target = msg.url || (BASE_URL + '/dashboard');
+        // Session is set. Navigate to dashboard via state (avoids black screen).
+        const target = msg.url || `${BASE_URL}/dashboard`;
         setTimeout(() => navigateTo(target), 300);
+
+      } else if (msg.type === 'GOOGLE_AUTH_BLOCKED') {
+        // Google blocked the OAuth in WebView (shows policy error page).
+        // Show alert and go back.
+        alert(
+          'Google Sign-In was blocked in this browser view.\n\n' +
+          'This can happen on some devices. Please try again — ' +
+          'on a second attempt Google often allows it.'
+        );
+        navigateTo(BASE_URL);
 
       } else if (msg.type === 'DEBUG_LOG') {
         console.log('[WebView]', msg.msg);
       }
     } catch (_) {}
-  };
+  }, [handleGoogleSignIn, navigateTo]);
 
-  const onNavigationStateChange = (navState) => {
-    // Navigation state monitoring if needed
-  };
-
-  // ── HTTP / network error handlers ────────────────────────────────────
+  // ── Error handling ─────────────────────────────────────────────────────────
   const [webviewError, setWebviewError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
+  // Auto-retry up to 3 times if the backend is temporarily down (HF Space cold start)
   const onHttpError = useCallback((synthEvent) => {
     const { nativeEvent } = synthEvent;
-    // Only show error UI for non-API, non-static paths to avoid noise
     const url = nativeEvent?.url || '';
-    if (!url.includes('/static/') && !url.includes('/api/')) {
-      setWebviewError({ url, statusCode: nativeEvent?.statusCode });
+    const code = nativeEvent?.statusCode;
+
+    // Ignore sub-resources (static files, APIs) — only show overlay for page loads
+    if (url.includes('/static/') || url.includes('/api/')) return;
+
+    // Auto-retry the initial load (HF Space cold start can take 20–30 s)
+    if ((url === BASE_URL || url === BASE_URL + '/') && retryCount < 4) {
+      setRetryCount((c) => c + 1);
+      setTimeout(() => navigateTo(BASE_URL), 5000); // retry after 5 s
+      return;
     }
-  }, []);
+
+    setWebviewError({ url, statusCode: code });
+  }, [retryCount, navigateTo]);
 
   const onError = useCallback((synthEvent) => {
     const { nativeEvent } = synthEvent;
-    const desc = nativeEvent?.description || 'Unknown error';
-    // Ignore benign errors that happen during OAuth redirects
-    if (!desc.includes('net::ERR_ABORTED')) {
-      setWebviewError({ url: nativeEvent?.url, description: desc });
-    }
+    const desc = nativeEvent?.description || '';
+    // ERR_ABORTED happens during redirects — not a real error
+    if (desc.includes('net::ERR_ABORTED') || desc.includes('ERR_ABORTED')) return;
+    setWebviewError({ url: nativeEvent?.url, description: desc });
   }, []);
 
-  const dismissError = useCallback(() => {
+  const handleRetry = useCallback(() => {
     setWebviewError(null);
-    // Navigate back to home (login page) on error dismissal
+    setRetryCount(0);
     navigateTo(BASE_URL);
   }, [navigateTo]);
 
+  // ── Loading overlay while waiting for HF Space cold start ─────────────────
+  const [showColdStartMsg, setShowColdStartMsg] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShowColdStartMsg(true), 8000);
+    return () => clearTimeout(t);
+  }, []);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0f" />
 
-      {/* HTTP / network error overlay */}
+      {/* Error overlay */}
       {webviewError && (
-        <View style={styles.errorOverlay}>
-          <Text style={styles.errorTitle}>⚠️ Page failed to load</Text>
-          <Text style={styles.errorDesc}>
+        <View style={styles.overlay}>
+          <Text style={styles.overlayTitle}>⚠️ Page failed to load</Text>
+          <Text style={styles.overlayDesc}>
             {webviewError.statusCode
               ? `HTTP ${webviewError.statusCode}`
               : webviewError.description || 'Network error'}
           </Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={dismissError}>
-            <Text style={styles.retryBtnText}>Return to Login</Text>
+          <TouchableOpacity style={styles.btn} onPress={handleRetry}>
+            <Text style={styles.btnText}>Retry</Text>
           </TouchableOpacity>
         </View>
       )}
 
       <WebView
+        key={`wv-${retryCount}`}     // remount on retry
         ref={webviewRef}
         source={webviewSource}
         style={styles.webview}
@@ -268,7 +259,6 @@ export default function App() {
         thirdPartyCookiesEnabled={true}
         sharedCookiesEnabled={true}
         setSupportMultipleWindows={false}
-        onNavigationStateChange={onNavigationStateChange}
         injectedJavaScript={INJECT_ON_LOAD}
         onMessage={onMessage}
         onHttpError={onHttpError}
@@ -291,7 +281,7 @@ const styles = StyleSheet.create({
     opacity: 0.99,
     overflow: 'hidden',
   },
-  errorOverlay: {
+  overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#0a0a0f',
     alignItems: 'center',
@@ -299,30 +289,29 @@ const styles = StyleSheet.create({
     padding: 32,
     zIndex: 10,
   },
-  errorTitle: {
+  overlayTitle: {
     color: '#f87171',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 12,
     textAlign: 'center',
   },
-  errorDesc: {
+  overlayDesc: {
     color: '#94a3b8',
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 22,
   },
-  retryBtn: {
+  btn: {
     backgroundColor: '#6366f1',
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 10,
   },
-  retryBtnText: {
+  btnText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
   },
 });
-
