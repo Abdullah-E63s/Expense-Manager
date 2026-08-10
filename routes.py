@@ -1304,7 +1304,6 @@ def google_mobile_callback():
     """
     # For the implicit flow the server receives no useful query params.
     # All work is done client-side in the JS below.
-    # We do surface any error= query param Google may include on failure.
     error = request.args.get('error', '')
     error_desc = request.args.get('error_description', error)
 
@@ -1319,29 +1318,26 @@ def google_mobile_callback():
          display:flex;flex-direction:column;align-items:center;
          justify-content:center;min-height:100vh;text-align:center;padding:2em}}
     p{{margin:.5em 0;font-size:.95em;color:#94a3b8}}
+    .err{{color:#f87171}}
   </style>
 </head>
 <body>
-  <p id="msg">Completing sign-in\u2026</p>
+  <p id="msg">Signing you in\u2026</p>
   <script>
   (function() {{
     // Surface any error Google returned in the query string
     var queryError = {repr(error_desc)};
     if (queryError) {{
-      if (window.ReactNativeWebView) {{
-        window.ReactNativeWebView.postMessage(JSON.stringify({{
-          type: 'GOOGLE_TOKEN',
-          id_token: null,
-          error: 'Google returned error: ' + queryError
-        }}));
-      }} else {{
-        document.getElementById('msg').textContent = 'Sign-in error: ' + queryError;
-      }}
+      document.getElementById('msg').className = 'err';
+      document.getElementById('msg').textContent = 'Google error: ' + queryError;
       return;
     }}
 
-    // Read the id_token from the URL fragment (#id_token=xxx&...)
-    var hash = window.location.hash.substring(1);  // remove leading #
+    // ---------- Read id_token from the URL fragment ----------
+    // Google's implicit flow puts the token in the hash (#id_token=xxx&...).
+    // Fragments are NEVER sent to the server, so the backend serves this
+    // page without the token; the browser reads it from window.location.hash.
+    var hash = window.location.hash.substring(1);
     var params = {{}};
     hash.split('&').forEach(function(pair) {{
       var kv = pair.split('=');
@@ -1351,40 +1347,61 @@ def google_mobile_callback():
     var idToken = params['id_token'];
     var fragError = params['error'];
 
-    if (idToken) {{
-      if (window.ReactNativeWebView) {{
-        // ✅ Running inside the Expo WebView → post token to native handler
-        window.ReactNativeWebView.postMessage(JSON.stringify({{
-          type: 'GOOGLE_TOKEN',
-          id_token: idToken
-        }}));
-        document.getElementById('msg').textContent = 'Sign-in complete!';
+    if (!idToken) {{
+      if (fragError) {{
+        document.getElementById('msg').className = 'err';
+        document.getElementById('msg').textContent =
+          'Sign-in failed: ' + (params['error_description'] || fragError);
       }} else {{
-        // Fallback: redirect via custom scheme (for any non-WebView context)
-        window.location.replace('expensemanager://auth?id_token=' + encodeURIComponent(idToken));
+        document.getElementById('msg').textContent =
+          'No token received. Please go back and try again.';
       }}
-    }} else if (fragError) {{
-      var msg = params['error_description'] || fragError;
-      if (window.ReactNativeWebView) {{
-        window.ReactNativeWebView.postMessage(JSON.stringify({{
-          type: 'GOOGLE_TOKEN',
-          id_token: null,
-          error: msg
-        }}));
-      }} else {{
-        document.getElementById('msg').textContent = 'Sign-in error: ' + msg;
-      }}
-    }} else {{
-      // Page may have been opened directly without a fragment
-      document.getElementById('msg').textContent =
-        'No token received. Please go back and try again.';
+      return;
     }}
+
+    // ---------- Apply SAME pattern as email login ----------
+    // login.js does:  fetch('/api/auth/login', {{body: {{email, password}}}})
+    //                 .then(() => window.location.href = '/dashboard')
+    //
+    // We do exactly the same, just with id_token instead of email+password.
+    fetch('/api/auth/google', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      credentials: 'include',
+      body: JSON.stringify({{id_token: idToken}})
+    }})
+    .then(function(r) {{ return r.json(); }})
+    .then(function(data) {{
+      if (data && data.success) {{
+        // ✅ Logged in — navigate to dashboard
+        if (window.ReactNativeWebView) {{
+          // Inside Expo WebView: use native bridge for state-based navigation
+          // (avoids Android black screen on hardware-accelerated views)
+          window.ReactNativeWebView.postMessage(JSON.stringify({{
+            type: 'AUTH_SUCCESS',
+            url: data.redirect || '/dashboard'
+          }}));
+        }} else {{
+          // Regular browser or web: simple redirect, same as email login
+          window.location.href = data.redirect || '/dashboard';
+        }}
+      }} else {{
+        var errMsg = (data && (data.error || data.message)) || 'Sign-in failed';
+        document.getElementById('msg').className = 'err';
+        document.getElementById('msg').textContent = errMsg;
+      }}
+    }})
+    .catch(function(err) {{
+      document.getElementById('msg').className = 'err';
+      document.getElementById('msg').textContent = 'Network error: ' + err.message;
+    }});
   }})();
   </script>
 </body>
 </html>'''
 
     return html, 200
+
 
 @auth_bp.route("/set-password", methods=["GET", "POST"])
 @login_required

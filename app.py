@@ -264,6 +264,20 @@ def _versioned_url_for(endpoint, **values):
 
 
 # ── Request lifecycle hooks ───────────────────────────────────────────────────
+@app.before_request
+def sanitize_origin_header():
+    """Strip newline characters from the Origin header before flask_cors reads it.
+
+    Google's validation bots and some security scanners send malformed Origin
+    headers containing \\r\\n, which causes flask_cors to raise:
+        ValueError: Header values must not contain newline characters.
+    Mutating the WSGI environ here fixes it before any extension sees the value.
+    """
+    raw = request.environ.get('HTTP_ORIGIN', '')
+    if raw and ('\n' in raw or '\r' in raw):
+        request.environ['HTTP_ORIGIN'] = raw.replace('\n', '').replace('\r', '').strip()
+
+
 @app.after_request
 def add_security_headers(response):
     """Apply security and cache-control headers on every response."""
