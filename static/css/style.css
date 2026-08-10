@@ -41,6 +41,7 @@
 html,
 body {
   height: 100%;
+  overscroll-behavior-y: none;
 }
 
 /* Password input container */
