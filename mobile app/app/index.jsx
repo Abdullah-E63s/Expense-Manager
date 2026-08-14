@@ -36,14 +36,18 @@ const INJECT_ON_LOAD = `
   (function () {
     'use strict';
 
-    // 1. Fix viewport for mobile rendering
+    // 1. Fix viewport for mobile rendering & prevent all auto-zooming
     var meta = document.querySelector('meta[name="viewport"]');
     if (!meta) {
       meta = document.createElement('meta');
       meta.name = 'viewport';
       document.head.appendChild(meta);
     }
-    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+
+    // Prevent double-tap zoom and gesture zoom
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
 
     // 2. Intercept Google Sign-In button click — delegate at document root so it
     //    fires even if google-auth.js renders/replaces the button after load.
@@ -213,6 +217,10 @@ export default function App() {
         onError={onError}
         bounces={false}
         overScrollMode="never"
+        scalesPageToFit={false}
+        textZoom={100}
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
