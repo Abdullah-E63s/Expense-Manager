@@ -44,7 +44,7 @@ try:
 except ImportError:
     cv2 = None
 
-from models import User, Expense, Budget
+from models import User, Expense, Budget, UserPreference
 
 # Import Firebase from firebase_init to avoid circular imports
 from firebase_init import firebase_admin, firebase_auth, FIREBASE_AVAILABLE
@@ -2097,6 +2097,46 @@ def upload_profile_picture():
     except Exception as e:
         current_app.logger.error(f"Profile picture upload failed: {e}", exc_info=True)
         return jsonify({"error": "Failed to upload image"}), 500
+
+@pages_bp.route('/api/account/preferences', methods=['GET', 'POST', 'OPTIONS'])
+@auth_bp.route('/preferences', methods=['GET', 'POST', 'OPTIONS'])
+@auth_bp.route('/account/preferences', methods=['GET', 'POST', 'OPTIONS'])
+def account_email_preferences():
+    """Get or save user email notification preferences."""
+    if request.method == 'OPTIONS':
+        return jsonify({}), 200
+
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized", "success": False}), 401
+
+    if request.method == 'GET':
+        prefs = UserPreference.get_by_user_id(user.id)
+        return jsonify({
+            "success": True,
+            "preferences": prefs.to_dict()
+        }), 200
+
+    # POST: save preferences
+    try:
+        data = request.get_json(silent=True) or request.form or {}
+        # Parse boolean values flexibly
+        monthly_raw = data.get('monthly_reports', data.get('monthlyReport', data.get('monthly-reports', False)))
+        budget_raw = data.get('budget_alerts', data.get('budgetAlerts', data.get('budget-alerts', True)))
+
+        monthly_reports = bool(monthly_raw) if not isinstance(monthly_raw, str) else monthly_raw.lower() in ('true', '1', 'on')
+        budget_alerts = bool(budget_raw) if not isinstance(budget_raw, str) else budget_raw.lower() in ('true', '1', 'on')
+
+        saved = UserPreference.save_preferences(user.id, monthly_reports, budget_alerts)
+        return jsonify({
+            "success": True,
+            "message": "Email preferences saved successfully!",
+            "preferences": saved.to_dict()
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error saving user preferences: {e}", exc_info=True)
+        return jsonify({"error": str(e), "success": False}), 500
+
 
 def _delete_firebase_user(email: str) -> None:
     """Delete Firebase Auth user if one exists for the given email."""

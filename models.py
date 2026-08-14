@@ -326,6 +326,16 @@ def init_db():
         INDEX idx_archived_email (email),
         INDEX idx_archived_user (original_user_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+    CREATE TABLE IF NOT EXISTS user_preferences (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL UNIQUE,
+        monthly_reports BOOLEAN DEFAULT FALSE,
+        budget_alerts BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     """
     
     try:
@@ -916,3 +926,47 @@ class Budget(TimestampMixin):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+
+class UserPreference(TimestampMixin):
+    """User email and notification preferences."""
+
+    def __init__(self, **kwargs):
+        self.id = kwargs.get('id')
+        self.user_id = kwargs.get('user_id')
+        self.monthly_reports = bool(kwargs.get('monthly_reports', False))
+        self.budget_alerts = bool(kwargs.get('budget_alerts', True))
+        self.created_at = kwargs.get('created_at')
+        self.updated_at = kwargs.get('updated_at')
+
+    @classmethod
+    def get_by_user_id(cls, user_id: int) -> 'UserPreference':
+        """Get preferences for a user, returning default preferences if none exist yet."""
+        query = "SELECT * FROM user_preferences WHERE user_id = %s"
+        data = execute_query(query, (user_id,), fetch_one=True)
+        if data:
+            return cls(**data)
+        return cls(user_id=user_id, monthly_reports=False, budget_alerts=True)
+
+    @classmethod
+    def save_preferences(cls, user_id: int, monthly_reports: bool, budget_alerts: bool) -> 'UserPreference':
+        """Save or update user email preferences."""
+        query = """
+            INSERT INTO user_preferences (user_id, monthly_reports, budget_alerts, updated_at)
+            VALUES (%s, %s, %s, NOW())
+            ON DUPLICATE KEY UPDATE
+                monthly_reports = VALUES(monthly_reports),
+                budget_alerts = VALUES(budget_alerts),
+                updated_at = NOW()
+        """
+        execute_query(query, (user_id, monthly_reports, budget_alerts), commit=True)
+        return cls.get_by_user_id(user_id)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'monthly_reports': self.monthly_reports,
+            'budget_alerts': self.budget_alerts,
+            'monthlyReports': self.monthly_reports,
+            'budgetAlerts': self.budget_alerts
+        }
+

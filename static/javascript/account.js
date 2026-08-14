@@ -323,6 +323,82 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Email Preferences
+    const emailPreferencesForm = document.getElementById('email-preferences');
+    const monthlyReportsInput = document.getElementById('monthly-reports');
+    const budgetAlertsInput = document.getElementById('budget-alerts');
+
+    async function loadEmailPreferences() {
+        if (!emailPreferencesForm) return;
+        try {
+            const res = await fetch('/api/account/preferences', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'include'
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.preferences) {
+                if (monthlyReportsInput) {
+                    monthlyReportsInput.checked = Boolean(data.preferences.monthly_reports ?? data.preferences.monthlyReports);
+                }
+                if (budgetAlertsInput) {
+                    budgetAlertsInput.checked = Boolean(data.preferences.budget_alerts ?? data.preferences.budgetAlerts);
+                }
+            }
+        } catch (e) {
+            console.warn('Preferences load error:', e);
+        }
+    }
+
+    if (emailPreferencesForm) {
+        emailPreferencesForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('save-preferences-btn') || emailPreferencesForm.querySelector('button[type="submit"]');
+            const origText = saveBtn ? saveBtn.textContent : 'Save Preferences';
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+            }
+            if (typeof showLoading === 'function') {
+                showLoading('Saving Preferences...', 'Updating email notification settings');
+            }
+
+            try {
+                const payload = {
+                    monthly_reports: monthlyReportsInput ? monthlyReportsInput.checked : false,
+                    budget_alerts: budgetAlertsInput ? budgetAlertsInput.checked : true
+                };
+
+                const res = await fetch('/api/account/preferences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || data.message || 'Failed to save preferences');
+
+                showMessage(accountMsg, '✓ Email preferences saved successfully!', 'success');
+            } catch (err) {
+                console.error('Preferences save error:', err);
+                showMessage(accountMsg, err.message, 'error');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = origText;
+                }
+                if (typeof hideLoading === 'function') hideLoading();
+            }
+        });
+
+        loadEmailPreferences();
+    }
+
     // Global password toggle behavior
     document.querySelectorAll('.toggle-password').forEach(span => {
         span.style.cursor = 'pointer';
@@ -337,3 +413,4 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
