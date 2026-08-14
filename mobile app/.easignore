@@ -1,0 +1,11 @@
+# EAS Build Ignore File
+# Exclude local build artifacts, caches, and node_modules so upload takes seconds (1-2 MB instead of 394 MB)
+
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.DS_Store
+Thumbs.db
+.git/
