@@ -543,7 +543,7 @@
                 try {
                   const errorData = await res.json();
                   errorMsg = errorData.error || errorMsg;
-                } catch (e) {}
+                } catch (e) { }
                 console.warn(`Backend returned ${res.status} for ${file.name}: ${errorMsg}`);
                 showYoloToast(`Server error processing ${file.name} (${res.status}): ${errorMsg}`, 'warn', 6000);
               }
@@ -874,34 +874,7 @@
       e.stopPropagation();
       detect();
     });
-
-    // Expose global re-scan API so any receipt or gallery item can trigger AI OCR
-    window.runYoloScan = async function(fileOrBlob, filename = 'receipt_scan.jpg') {
-      try {
-        let file = fileOrBlob;
-        if (fileOrBlob instanceof Blob && !(fileOrBlob instanceof File)) {
-          file = new File([fileOrBlob], filename, { type: fileOrBlob.type || 'image/jpeg' });
-        }
-        selectedFiles = [file];
-
-        if (previewImg) {
-          previewImg.src = URL.createObjectURL(file);
-          if (previewWrap) previewWrap.style.display = 'block';
-        }
-
-        const yoloSection = document.querySelector('.yolo-container');
-        if (yoloSection) {
-          yoloSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        await detect();
-      } catch (err) {
-        console.error('runYoloScan error:', err);
-        alert('Could not start AI scan on receipt: ' + err.message);
-      }
-    };
   }
 
   document.addEventListener('DOMContentLoaded', setupYoloUI);
 })();
-

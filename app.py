@@ -25,35 +25,9 @@ from models import init_db, User, execute_query, Database
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-
-class _SanitizeOriginMiddleware:
-    """WSGI middleware that strips newline characters from HTTP_ORIGIN.
-
-    Flask's before_request hooks are NOT called for 404 routes because
-    raise_routing_exception() fires before preprocess_request().  As a result
-    flask_cors tries to reflect a malformed Origin into the response headers
-    and raises:
-        ValueError: Header values must not contain newline characters.
-
-    By fixing the environ at the WSGI level (before Flask touches the request)
-    we prevent the crash for ALL requests, including unmatched routes.
-    This happens with external scanner/bot traffic that sends\r\n in Origin.
-    """
-    def __init__(self, wsgi_app):
-        self.wsgi_app = wsgi_app
-
-    def __call__(self, environ, start_response):
-        raw = environ.get('HTTP_ORIGIN', '')
-        if raw and ('\n' in raw or '\r' in raw):
-            environ['HTTP_ORIGIN'] = raw.replace('\n', '').replace('\r', '').strip()
-        return self.wsgi_app(environ, start_response)
-
-
 # ── App factory ──────────────────────────────────────────────────────────────
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.wsgi_app = _SanitizeOriginMiddleware(
-    ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
-)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.config.from_object(get_config())
 
 # Ensure session cookie settings are explicitly set
@@ -290,7 +264,6 @@ def _versioned_url_for(endpoint, **values):
 
 
 # ── Request lifecycle hooks ───────────────────────────────────────────────────
-
 @app.after_request
 def add_security_headers(response):
     """Apply security and cache-control headers on every response."""
@@ -417,17 +390,6 @@ def logout():
     if request.method == 'POST' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
     return redirect(url_for('root'))
-
-
-# ── Public Mobile App Download ────────────────────────────────────────────────
-@app.route('/download')
-@app.route('/download-apk')
-@app.route('/download-app')
-@app.route('/app.apk')
-def download_app():
-    """Public direct download for the Android APK build."""
-    DIRECT_APK_URL = 'https://expo.dev/artifacts/eas/U56UjgMGopQqwknMetBRXudn3_Sb38QoV1PiNl8F2pY.apk'
-    return redirect(DIRECT_APK_URL, code=302)
 
 
 # ── Development runner ────────────────────────────────────────────────────────

@@ -426,9 +426,113 @@ function setupActionListeners() {
     }, true);
 }
 
+// ── Web Pull-to-Refresh Gesture for Mobile ──────────────────────────────────
+function initPullToRefresh() {
+    // Only enable on touch devices
+    if (!('ontouchstart' in window) && !navigator.maxTouchPoints) return;
+
+    let startY = 0;
+    let currentY = 0;
+    let isPulling = false;
+    let isRefreshing = false;
+    const PULL_THRESHOLD = 65;
+
+    let indicator = document.getElementById('pull-to-refresh-indicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'pull-to-refresh-indicator';
+        indicator.innerHTML = `
+            <div class="ptr-content">
+                <img src="/static/images/logo.png" alt="Refreshing" class="ptr-spinner-logo">
+                <span class="ptr-text">Pull to refresh</span>
+            </div>
+        `;
+        document.body.prepend(indicator);
+    }
+
+    const ptrLogo = indicator.querySelector('.ptr-spinner-logo');
+    const ptrText = indicator.querySelector('.ptr-text');
+
+    window.addEventListener('touchstart', (e) => {
+        const top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        if (top <= 3 && e.touches.length === 1 && !isRefreshing) {
+            startY = e.touches[0].pageY;
+            isPulling = true;
+        } else {
+            isPulling = false;
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!isPulling || isRefreshing) return;
+        currentY = e.touches[0].pageY;
+        const diff = currentY - startY;
+        const top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+        if (diff > 5 && top <= 3) {
+            const pullDistance = Math.min(diff * 0.4, 85);
+            indicator.style.transform = `translateX(-50%) translateY(${pullDistance}px)`;
+            indicator.style.opacity = `${Math.min(pullDistance / 40, 1)}`;
+
+            const rotation = (pullDistance / PULL_THRESHOLD) * 360;
+            if (ptrLogo) ptrLogo.style.transform = `rotate(${rotation}deg)`;
+
+            if (pullDistance >= 45) {
+                if (ptrText) ptrText.textContent = 'Release to refresh';
+            } else {
+                if (ptrText) ptrText.textContent = 'Pull to refresh';
+            }
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchend', async () => {
+        if (!isPulling || isRefreshing) return;
+        const diff = currentY - startY;
+        isPulling = false;
+
+        const top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        if (diff * 0.4 >= 45 && top <= 3) {
+            isRefreshing = true;
+            indicator.style.transform = 'translateX(-50%) translateY(52px)';
+            indicator.style.opacity = '1';
+            if (ptrText) ptrText.textContent = 'Refreshing...';
+            if (ptrLogo) ptrLogo.classList.add('ptr-spin');
+
+            if (typeof showLoading === 'function') {
+                showLoading('Refreshing App...', 'Syncing latest data');
+            }
+
+            try {
+                if (typeof window.loadExpenses === 'function') {
+                    await window.loadExpenses();
+                    if (typeof window.loadAnalytics === 'function') await window.loadAnalytics();
+                    if (typeof window.loadBudget === 'function') await window.loadBudget();
+                    setTimeout(() => {
+                        indicator.style.transform = 'translateX(-50%) translateY(0)';
+                        indicator.style.opacity = '0';
+                        if (ptrLogo) ptrLogo.classList.remove('ptr-spin');
+                        isRefreshing = false;
+                        if (typeof hideLoading === 'function') hideLoading();
+                    }, 400);
+                } else {
+                    window.location.reload();
+                }
+            } catch (_) {
+                window.location.reload();
+            }
+        } else {
+            indicator.style.transform = 'translateX(-50%) translateY(0)';
+            indicator.style.opacity = '0';
+        }
+        startY = 0;
+        currentY = 0;
+    }, { passive: true });
+}
+
 // Add event listeners when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function () {
     setupActionListeners();
+    initPullToRefresh();
 
     // Add logout button event listener if it exists
     const logoutBtn = document.getElementById('logout-btn');
@@ -452,4 +556,6 @@ window.togglePasswordVisibility = togglePasswordVisibility;
 window.showMessage = showMessage;
 window.showLoading = showLoading;
 window.hideLoading = hideLoading;
+window.initPullToRefresh = initPullToRefresh;
+
 

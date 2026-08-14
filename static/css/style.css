@@ -1606,4 +1606,76 @@ textarea::placeholder {
     transform: translateX(-50%) translateY(0) scale(1);
   }
 }
+
+/* ==========================================================================
+   Completely Hide Google reCAPTCHA Badge (Keeps API working without UI blockage)
+   ========================================================================== */
+
+.grecaptcha-badge,
+iframe[src*="google.com/recaptcha"],
+div[style*="z-index: 2000000000"] {
+  visibility: hidden !important;
+  display: none !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  bottom: -9999px !important;
+  z-index: -99999 !important;
+}
+
+/* ==========================================================================
+   Web Pull-to-Refresh Indicator (Smooth Top Elastic Pull)
+   ========================================================================== */
+
+#pull-to-refresh-indicator {
+  position: fixed;
+  top: -65px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  z-index: 10002;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+.ptr-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  padding: 8px 16px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 15px rgba(59, 130, 246, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.ptr-spinner-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  object-fit: cover;
+  transition: transform 0.1s linear;
+}
+
+.ptr-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #38bdf8;
+  letter-spacing: 0.2px;
+}
+
+.ptr-spin {
+  animation: ptrSpinAnim 0.75s linear infinite !important;
+}
+
+@keyframes ptrSpinAnim {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 

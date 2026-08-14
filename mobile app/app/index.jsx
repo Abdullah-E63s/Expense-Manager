@@ -215,8 +215,8 @@ export default function App() {
         onMessage={onMessage}
         onHttpError={onHttpError}
         onError={onError}
-        bounces={false}
-        overScrollMode="never"
+        bounces={true}
+        overScrollMode="always"
         scalesPageToFit={false}
         textZoom={100}
         pullToRefreshEnabled={true}
