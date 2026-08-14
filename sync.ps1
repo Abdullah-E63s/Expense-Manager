@@ -47,10 +47,14 @@ git push origin main 2>&1
 # Step 3: Push to Hugging Face Spaces
 Write-Host ""
 Write-Host "3. [HUGGING FACE] Syncing to HuggingFace Space..." -ForegroundColor Green
-if (Test-Path "hf_upload.py") {
-    python hf_upload.py
-} else {
-    git push hf main 2>&1
+try {
+    if (Test-Path "hf_upload.py") {
+        python hf_upload.py
+    } else {
+        git push hf main 2>&1
+    }
+} catch {
+    Write-Host "   [Warning] Hugging Face Space sync skipped: $($_.Exception.Message)" -ForegroundColor Yellow
 }
 
 # Step 4: Optional EAS Cloud Build
