@@ -13,7 +13,7 @@ if os.path.exists(_env_path):
     load_dotenv(_env_path)
 
 # ── Core Flask imports ────────────────────────────────────────────────────────
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, current_app
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, current_app, make_response, send_from_directory
 from flask_mail import Mail
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect, generate_csrf
