@@ -223,6 +223,10 @@ textarea::placeholder {
   border-bottom: 1px solid var(--border);
 }
 
+.mobile-logout-icon-btn {
+  display: none;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -1423,10 +1427,31 @@ textarea::placeholder {
     margin-left: 0 !important;
   }
 
-  /* Hide clunky top header buttons on mobile since bottom navigation handles them */
+  /* Hide clunky top header text buttons on mobile since bottom navigation handles them */
   .header-actions .btn,
   .header-nav-btn {
     display: none !important;
+  }
+
+  .mobile-logout-icon-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+    border: 1px solid rgba(239, 68, 68, 0.4) !important;
+    color: #f87171 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .mobile-logout-icon-btn:active {
+    transform: scale(0.92) !important;
+    background: rgba(239, 68, 68, 0.3) !important;
   }
 
   .header-avatar-link {

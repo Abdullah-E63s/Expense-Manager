@@ -532,15 +532,18 @@ document.addEventListener('DOMContentLoaded', function () {
     setupActionListeners();
     initPullToRefresh();
 
-    // Add logout button event listener if it exists
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn && !logoutBtn.dataset.boundLogout) {
-        logoutBtn.addEventListener('click', function() {
-            showLoading('Logging Out...', 'Clearing session securely');
-            handleLogout();
-        });
-        logoutBtn.dataset.boundLogout = '1';
-    }
+    // Add logout button event listeners to all logout triggers
+    const logoutBtns = document.querySelectorAll('#logout-btn, #account-logout-btn, #mobile-logout-btn, .btn-logout, [data-action="logout"]');
+    logoutBtns.forEach(btn => {
+        if (!btn.dataset.boundLogout) {
+            btn.addEventListener('click', function (e) {
+                e && e.preventDefault && e.preventDefault();
+                showLoading('Logging Out...', 'Clearing session securely');
+                handleLogout();
+            });
+            btn.dataset.boundLogout = '1';
+        }
+    });
 
     // Add current year to footer if the element exists
     const currentYearElement = document.getElementById('current-year');
