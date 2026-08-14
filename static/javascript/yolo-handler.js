@@ -417,6 +417,14 @@
       const originalBtnHTML = processBtn.innerHTML;
       try { processBtn.setAttribute('aria-busy', 'true'); } catch (_) { }
       // Create a lightweight progress overlay (JS-only, no HTML/CSS edits)
+      // Check network connectivity for AI scanner
+      if (!navigator.onLine) {
+        alert('⚡ AI Receipt Scanning requires an active internet connection to process with YOLO. Please connect to Wi-Fi or mobile data to scan.');
+        if (typeof window.showLoading === 'function') window.hideLoading();
+        processBtn.disabled = false;
+        return;
+      }
+
       let progressOverlay = document.createElement('div');
       progressOverlay.style.cssText = 'position:fixed; top:20px; right:20px; background:#2a2a2a; color:#fff; padding:10px 14px; border-radius:8px; z-index:10002; box-shadow:0 4px 12px rgba(0,0,0,0.3); font-size:13px;';
       progressOverlay.innerHTML = `

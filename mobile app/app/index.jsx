@@ -211,10 +211,24 @@ export default function App() {
         thirdPartyCookiesEnabled={true}
         sharedCookiesEnabled={true}
         setSupportMultipleWindows={false}
+        cacheEnabled={true}
+        cacheMode="LOAD_CACHE_ELSE_NETWORK"
         injectedJavaScript={INJECT_ON_LOAD}
         onMessage={onMessage}
         onHttpError={onHttpError}
         onError={onError}
+        renderError={() => (
+          <View style={styles.overlay}>
+            <Text style={styles.overlayIcon}>📡</Text>
+            <Text style={styles.overlayTitle}>You are Offline</Text>
+            <Text style={styles.overlayDesc}>
+              Could not connect to the network. Your saved data is stored securely and offline changes will sync once reconnected.
+            </Text>
+            <TouchableOpacity style={styles.btn} onPress={handleRetry}>
+              <Text style={styles.btnText}>Retry Connection</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         bounces={true}
         overScrollMode="always"
         scalesPageToFit={false}
@@ -248,8 +262,12 @@ const styles = StyleSheet.create({
     padding: 32,
     zIndex: 10,
   },
+  overlayIcon: {
+    fontSize: 44,
+    marginBottom: 16,
+  },
   overlayTitle: {
-    color: '#f87171',
+    color: '#f8fafc',
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 12,

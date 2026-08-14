@@ -9,10 +9,15 @@
     <meta name="RECAPTCHA_SITE_KEY" content="{{ recaptcha_site_key }}">
     <title>Dashboard • Expense Manager</title>
     <link rel="icon" type="image/png" href="/static/images/logo.png">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0a0a0f">
 
     <!-- CSS Dependencies -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=mobile_v3">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/yolo-styles.css') }}?v=mobile_v3">
+
+    <!-- Offline Support & Service Worker -->
+    <script src="{{ url_for('static', filename='javascript/offline-manager.js') }}"></script>
 
     <!-- JS Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>

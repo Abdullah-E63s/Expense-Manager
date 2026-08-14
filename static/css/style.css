@@ -1820,13 +1820,79 @@ a[href*="app.apk"] {
   display: none !important;
 }
 
-/* Only show on Desktop / Laptop screens */
 @media (min-width: 1024px) {
   .download-apk-link,
   a.download-apk-link[href*="/download"] {
     display: inline-block !important;
   }
 }
+
+/* ==========================================================================
+   Offline Status & Sync Notification Banner
+   ========================================================================== */
+
+.offline-sync-banner {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  z-index: 10010;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  max-width: 90%;
+  width: auto;
+}
+
+.offline-sync-banner.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.offline-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+}
+
+.offline-sync-banner.banner-warning .offline-banner-content {
+  background: rgba(30, 27, 75, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65), 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+.offline-sync-banner.banner-success .offline-banner-content {
+  background: rgba(6, 78, 59, 0.95);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #34d399;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65), 0 0 20px rgba(16, 185, 129, 0.25);
+}
+
+.offline-banner-icon {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .offline-sync-banner {
+    bottom: 85px;
+    width: 92%;
+  }
+  .offline-banner-content {
+    font-size: 12px;
+    padding: 8px 14px;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
 
 
 

@@ -97,6 +97,32 @@ document.addEventListener('DOMContentLoaded', function () {
             description: formData.get('description') || document.getElementById('expense-description')?.value
         };
 
+        // Offline optimistic handling
+        if (!navigator.onLine) {
+            const tempId = 'offline_' + Date.now();
+            const newExp = {
+                id: tempId,
+                value: parseFloat(expenseData.amount) || 0,
+                amount: parseFloat(expenseData.amount) || 0,
+                category: expenseData.category || 'General',
+                description: expenseData.description || 'Offline Expense',
+                created_at: expenseData.date || new Date().toISOString(),
+                date: expenseData.date || new Date().toISOString()
+            };
+            if (window.OfflineManager) {
+                window.OfflineManager.enqueueAction('ADD_EXPENSE', expenseData);
+                const cached = window.OfflineManager.cache.get('dashboard_expenses') || { items: [] };
+                cached.items = [newExp, ...(cached.items || [])];
+                window.OfflineManager.cache.set('dashboard_expenses', cached);
+                updateDashboard(cached);
+            }
+            expenseForm.reset();
+            showMessage(globalMsg, 'You are offline. Your changes have been made locally. Please connect to the internet to save them to the server.Expense saved locally (Offline). Connect to internet to sync.', 'info');
+            _expenseSubmitting = false;
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
+            return;
+        }
+
         try {
             const recaptcha_token = typeof window.getRecaptchaToken === 'function'
                 ? await window.getRecaptchaToken('add_expense')
@@ -124,8 +150,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(data.error || data.message || 'Failed to add expense');
             }
         } catch (error) {
-            console.error('Error adding expense:', error);
-            showMessage(globalMsg, error.message || 'An error occurred. Please try again.', 'error');
+            console.warn('Error adding expense, falling back to offline queue:', error);
+            // Network fallback to offline queue
+            if (window.OfflineManager) {
+                const tempId = 'offline_' + Date.now();
+                const newExp = {
+                    id: tempId,
+                    value: parseFloat(expenseData.amount) || 0,
+                    amount: parseFloat(expenseData.amount) || 0,
+                    category: expenseData.category || 'General',
+                    description: expenseData.description || 'Offline Expense',
+                    created_at: expenseData.date || new Date().toISOString(),
+                    date: expenseData.date || new Date().toISOString()
+                };
+                window.OfflineManager.enqueueAction('ADD_EXPENSE', expenseData);
+                const cached = window.OfflineManager.cache.get('dashboard_expenses') || { items: [] };
+                cached.items = [newExp, ...(cached.items || [])];
+                window.OfflineManager.cache.set('dashboard_expenses', cached);
+                updateDashboard(cached);
+                expenseForm.reset();
+                showMessage(globalMsg, '⚠️ Expense saved locally (Offline). Connect to internet to sync.', 'info');
+            } else {
+                showMessage(globalMsg, error.message || 'An error occurred. Please try again.', 'error');
+            }
         } finally {
             _expenseSubmitting = false;
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
@@ -147,12 +194,22 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const data = await response.json();
+            if (window.OfflineManager && data) {
+                window.OfflineManager.cache.set('dashboard_expenses', data);
+            }
             updateDashboard(data);
         } catch (error) {
-            console.error('Error loading expenses:', error);
-            // Only show message if it's not a transient connection issue
+            console.warn('Network error loading expenses, checking offline cache:', error);
+            if (window.OfflineManager) {
+                const cached = window.OfflineManager.cache.get('dashboard_expenses');
+                if (cached) {
+                    console.log('[Dashboard] Loaded expenses from offline cache');
+                    updateDashboard(cached);
+                    return;
+                }
+            }
             if (error.message !== 'Failed to fetch') {
-                showMessage('Loading your data...', 'info'); // Softer message
+                showMessage('Loading your data...', 'info');
             }
         }
     }
@@ -726,6 +783,21 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        // Offline optimistic deletion
+        if (!navigator.onLine) {
+            if (window.OfflineManager) {
+                window.OfflineManager.enqueueAction('DELETE_EXPENSE', { id: expenseId });
+                const cached = window.OfflineManager.cache.get('dashboard_expenses');
+                if (cached && cached.items) {
+                    cached.items = cached.items.filter(it => String(it.id) !== String(expenseId));
+                    window.OfflineManager.cache.set('dashboard_expenses', cached);
+                    updateDashboard(cached);
+                }
+            }
+            showMessage(globalMsg, '⚠️ Expense deleted locally (Offline). Connect to internet to sync.', 'info');
+            return;
+        }
+
         try {
             const recaptcha_token = typeof window.getRecaptchaToken === 'function'
                 ? await window.getRecaptchaToken('delete_expense')
@@ -750,8 +822,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(data.error || data.message || 'Failed to delete expense');
             }
         } catch (error) {
-            console.error('Error deleting expense:', error);
-            showMessage(globalMsg, error.message || 'Failed to delete expense. Please try again.', 'error');
+            console.warn('Error deleting expense, falling back to offline queue:', error);
+            if (window.OfflineManager) {
+                window.OfflineManager.enqueueAction('DELETE_EXPENSE', { id: expenseId });
+                const cached = window.OfflineManager.cache.get('dashboard_expenses');
+                if (cached && cached.items) {
+                    cached.items = cached.items.filter(it => String(it.id) !== String(expenseId));
+                    window.OfflineManager.cache.set('dashboard_expenses', cached);
+                    updateDashboard(cached);
+                }
+                showMessage(globalMsg, '⚠️ Expense deleted locally (Offline). Connect to internet to sync.', 'info');
+            } else {
+                showMessage(globalMsg, error.message || 'Failed to delete expense. Please try again.', 'error');
+            }
         }
     }
 
@@ -985,38 +1068,24 @@ function initExpensesList() {
 
 // Budget functionality
 async function loadBudget() {
-    try {
-        const res = await fetch('/api/expenses/budget', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const budget = res.ok ? await res.json() : null;
-
-        if (budget && budget.amount != null) {
-            // Budget exists
-            window.currentBudgetAmount = budget.amount;
-            window.currentBudgetPeriod = budget.period;
+    function applyBudgetUI(budget) {
+        if (budget && budget.amount != null && budget.amount > 0) {
+            window.currentBudgetAmount = parseFloat(budget.amount);
+            window.currentBudgetPeriod = budget.period || 'monthly';
 
             const display = document.getElementById('budget-display');
             const controls = document.getElementById('budget-controls');
             const addBtn = document.getElementById('add-budget-btn');
             const removeBtn = document.getElementById('remove-budget-btn');
             if (display) {
-                display.innerHTML = `<p>Budget: $${parseFloat(budget.amount).toFixed(2)} (${budget.period})</p>`;
+                display.innerHTML = `<p>Budget: $${parseFloat(budget.amount).toFixed(2)} (${budget.period || 'monthly'})</p>`;
             }
             if (controls) {
                 controls.style.display = 'block';
                 if (addBtn) addBtn.style.display = 'none';
                 if (removeBtn) removeBtn.style.display = 'inline-block';
             }
-
-            // Refresh expenses to update remaining budget display
-            if (typeof loadExpenses === 'function') {
-                await loadExpenses();
-            }
         } else {
-            // No budget set
             window.currentBudgetAmount = 0;
             window.currentBudgetPeriod = 'monthly';
             const display = document.getElementById('budget-display');
@@ -1030,8 +1099,27 @@ async function loadBudget() {
                 if (removeBtn) removeBtn.style.display = 'none';
             }
         }
+    }
+
+    try {
+        const res = await fetch('/api/expenses/budget', {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const budget = res.ok ? await res.json() : null;
+        if (window.OfflineManager && budget) {
+            window.OfflineManager.cache.set('dashboard_budget', budget);
+        }
+        applyBudgetUI(budget);
     } catch (e) {
-        // ignore transient network errors
+        if (window.OfflineManager) {
+            const cached = window.OfflineManager.cache.get('dashboard_budget');
+            if (cached) {
+                applyBudgetUI(cached);
+                return;
+            }
+        }
     }
 }
 
@@ -1055,6 +1143,16 @@ function setupBudgetEvents() {
     }
     if (removeBtn) {
         removeBtn.addEventListener('click', async () => {
+            if (!navigator.onLine) {
+                if (window.OfflineManager) {
+                    window.OfflineManager.enqueueAction('UPDATE_BUDGET', { amount: 0, period: 'monthly' });
+                    window.OfflineManager.cache.set('dashboard_budget', { amount: 0, period: 'monthly' });
+                }
+                loadBudget();
+                if (msg) msg.textContent = '⚠️ Budget removed locally (Offline).';
+                return;
+            }
+
             try {
                 const res = await fetch('/api/expenses/budget', {
                     method: 'DELETE',
@@ -1085,6 +1183,20 @@ function setupBudgetEvents() {
                 if (msg) msg.textContent = 'Enter a valid amount';
                 return;
             }
+
+            // Offline handling for budget save
+            if (!navigator.onLine) {
+                const budgetData = { amount, period };
+                if (window.OfflineManager) {
+                    window.OfflineManager.enqueueAction('UPDATE_BUDGET', budgetData);
+                    window.OfflineManager.cache.set('dashboard_budget', budgetData);
+                }
+                if (form) form.style.display = 'none';
+                if (msg) msg.textContent = '⚠️ Budget saved locally (Offline). Connect to internet to sync.';
+                loadBudget();
+                return;
+            }
+
             try {
                 const res = await fetch('/api/expenses/budget', {
                     method: 'POST',
@@ -1106,7 +1218,17 @@ function setupBudgetEvents() {
                     if (msg) msg.textContent = data.error || 'Failed to save budget';
                 }
             } catch (e) {
-                if (msg) msg.textContent = 'Error saving budget';
+                console.warn('Network error saving budget, queueing offline:', e);
+                if (window.OfflineManager) {
+                    const budgetData = { amount, period };
+                    window.OfflineManager.enqueueAction('UPDATE_BUDGET', budgetData);
+                    window.OfflineManager.cache.set('dashboard_budget', budgetData);
+                    if (form) form.style.display = 'none';
+                    if (msg) msg.textContent = '⚠️ Budget saved locally (Offline). Connect to internet to sync.';
+                    loadBudget();
+                } else {
+                    if (msg) msg.textContent = 'Error saving budget';
+                }
             }
         });
     }

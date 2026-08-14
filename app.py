@@ -342,6 +342,21 @@ def root():
     return redirect('/dashboard' if session.get('user_id') else '/login')
 
 
+@app.route('/sw.js')
+def service_worker():
+    """Serve service worker with root scope permissions."""
+    response = make_response(send_from_directory('static', 'sw.js', mimetype='application/javascript'))
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+
+@app.route('/manifest.json')
+def pwa_manifest():
+    """Serve PWA manifest for standalone offline capability."""
+    return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+
+
 @app.route('/health')
 def health():
     """Health check endpoint — required for deployment platforms."""

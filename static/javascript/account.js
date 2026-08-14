@@ -19,15 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Load profile info
     async function loadProfile() {
         if (!profileForm) return;
-        try {
-            const res = await fetch('/api/auth/account/profile', {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' },
-                credentials: 'include'
-            });
-            if (!res.ok) throw new Error('Failed to load profile');
-            const data = await res.json();
 
+        function applyProfileUI(data) {
+            if (!data) return;
             if (usernameInput) usernameInput.value = data.username || '';
             if (emailInput) emailInput.value = data.email || '';
             if (firstNameInput) firstNameInput.value = data.first_name || '';
@@ -40,8 +34,29 @@ document.addEventListener('DOMContentLoaded', function () {
             if (signedUpEl) signedUpEl.textContent = 'Signed up: ' + fmt(data.signed_up_at);
             if (pwdChangedEl) pwdChangedEl.textContent = 'Password changed: ' + fmt(data.password_changed_at);
             if (avatarImg) avatarImg.src = data.profile_picture_url || '/static/images/pfp.jpg';
+        }
+
+        try {
+            const res = await fetch('/api/auth/account/profile', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'include'
+            });
+            if (!res.ok) throw new Error('Failed to load profile');
+            const data = await res.json();
+            if (window.OfflineManager && data) {
+                window.OfflineManager.cache.set('user_profile', data);
+            }
+            applyProfileUI(data);
         } catch (e) {
-            console.error('Profile load error:', e);
+            console.warn('Profile load network error, checking offline cache:', e);
+            if (window.OfflineManager) {
+                const cached = window.OfflineManager.cache.get('user_profile');
+                if (cached) {
+                    applyProfileUI(cached);
+                    return;
+                }
+            }
         }
     }
 
@@ -52,15 +67,30 @@ document.addEventListener('DOMContentLoaded', function () {
             const saveBtn = document.getElementById('save-profile-btn');
             const orig = saveBtn ? saveBtn.textContent : '';
             if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+
+            const payload = {
+                username: usernameInput?.value?.trim() || '',
+                first_name: firstNameInput?.value?.trim() || '',
+                last_name: lastNameInput?.value?.trim() || '',
+                phone_country_code: phoneCcInput?.value?.trim() || '',
+                phone_number: phoneInput?.value?.trim() || ''
+            };
+
+            // Offline handling for profile update
+            if (!navigator.onLine) {
+                if (window.OfflineManager) {
+                    window.OfflineManager.enqueueAction('SAVE_PROFILE', payload);
+                    const cached = window.OfflineManager.cache.get('user_profile') || {};
+                    Object.assign(cached, payload);
+                    window.OfflineManager.cache.set('user_profile', cached);
+                }
+                showMessage(accountMsg, '⚠️ Profile saved locally (Offline). Connect to internet to sync.', 'info');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = orig; }
+                return;
+            }
+
             showMessage(accountMsg, 'Saving profile...', 'info');
             try {
-                const payload = {
-                    username: usernameInput?.value?.trim() || '',
-                    first_name: firstNameInput?.value?.trim() || '',
-                    last_name: lastNameInput?.value?.trim() || '',
-                    phone_country_code: phoneCcInput?.value?.trim() || '',
-                    phone_number: phoneInput?.value?.trim() || ''
-                };
                 const recaptcha_token = typeof window.getRecaptchaToken === 'function'
                     ? await window.getRecaptchaToken('save_profile')
                     : null;
@@ -78,11 +108,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.error || 'Failed to update profile');
+                if (window.OfflineManager) {
+                    const cached = window.OfflineManager.cache.get('user_profile') || {};
+                    Object.assign(cached, payload);
+                    window.OfflineManager.cache.set('user_profile', cached);
+                }
                 showMessage(accountMsg, '✓ Profile saved successfully', 'success');
                 loadProfile();
             } catch (err) {
-                console.error('Profile save error:', err);
-                showMessage(accountMsg, err.message, 'error');
+                console.warn('Profile save network error, queueing offline:', err);
+                if (window.OfflineManager) {
+                    window.OfflineManager.enqueueAction('SAVE_PROFILE', payload);
+                    const cached = window.OfflineManager.cache.get('user_profile') || {};
+                    Object.assign(cached, payload);
+                    window.OfflineManager.cache.set('user_profile', cached);
+                    showMessage(accountMsg, '⚠️ Profile saved locally (Offline). Connect to internet to sync.', 'info');
+                } else {
+                    showMessage(accountMsg, err.message, 'error');
+                }
             } finally {
                 if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = orig; }
             }
@@ -330,6 +373,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function loadEmailPreferences() {
         if (!emailPreferencesForm) return;
+
+        function applyPrefsUI(prefs) {
+            if (!prefs) return;
+            if (monthlyReportsInput) {
+                monthlyReportsInput.checked = Boolean(prefs.monthly_reports ?? prefs.monthlyReports);
+            }
+            if (budgetAlertsInput) {
+                budgetAlertsInput.checked = Boolean(prefs.budget_alerts ?? prefs.budgetAlerts);
+            }
+        }
+
         try {
             const res = await fetch('/api/account/preferences', {
                 method: 'GET',
@@ -339,15 +393,20 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!res.ok) return;
             const data = await res.json();
             if (data.preferences) {
-                if (monthlyReportsInput) {
-                    monthlyReportsInput.checked = Boolean(data.preferences.monthly_reports ?? data.preferences.monthlyReports);
+                if (window.OfflineManager) {
+                    window.OfflineManager.cache.set('user_preferences', data.preferences);
                 }
-                if (budgetAlertsInput) {
-                    budgetAlertsInput.checked = Boolean(data.preferences.budget_alerts ?? data.preferences.budgetAlerts);
-                }
+                applyPrefsUI(data.preferences);
             }
         } catch (e) {
-            console.warn('Preferences load error:', e);
+            console.warn('Preferences load error, checking offline cache:', e);
+            if (window.OfflineManager) {
+                const cached = window.OfflineManager.cache.get('user_preferences');
+                if (cached) {
+                    applyPrefsUI(cached);
+                    return;
+                }
+            }
         }
     }
 
@@ -360,16 +419,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 saveBtn.disabled = true;
                 saveBtn.textContent = 'Saving...';
             }
+
+            const payload = {
+                monthly_reports: monthlyReportsInput ? monthlyReportsInput.checked : false,
+                budget_alerts: budgetAlertsInput ? budgetAlertsInput.checked : true
+            };
+
+            // Offline handling for email preferences
+            if (!navigator.onLine) {
+                if (window.OfflineManager) {
+                    window.OfflineManager.enqueueAction('SAVE_PREFERENCES', payload);
+                    window.OfflineManager.cache.set('user_preferences', payload);
+                }
+                showMessage(accountMsg, '⚠️ Preferences saved locally (Offline). Connect to internet to sync.', 'info');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = origText;
+                }
+                return;
+            }
+
             if (typeof showLoading === 'function') {
                 showLoading('Saving Preferences...', 'Updating email notification settings');
             }
 
             try {
-                const payload = {
-                    monthly_reports: monthlyReportsInput ? monthlyReportsInput.checked : false,
-                    budget_alerts: budgetAlertsInput ? budgetAlertsInput.checked : true
-                };
-
                 const res = await fetch('/api/account/preferences', {
                     method: 'POST',
                     headers: {
@@ -383,10 +457,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.error || data.message || 'Failed to save preferences');
 
+                if (window.OfflineManager) {
+                    window.OfflineManager.cache.set('user_preferences', payload);
+                }
                 showMessage(accountMsg, '✓ Email preferences saved successfully!', 'success');
             } catch (err) {
-                console.error('Preferences save error:', err);
-                showMessage(accountMsg, err.message, 'error');
+                console.warn('Preferences save network error, queueing offline:', err);
+                if (window.OfflineManager) {
+                    window.OfflineManager.enqueueAction('SAVE_PREFERENCES', payload);
+                    window.OfflineManager.cache.set('user_preferences', payload);
+                    showMessage(accountMsg, '⚠️ Preferences saved locally (Offline). Connect to internet to sync.', 'info');
+                } else {
+                    showMessage(accountMsg, err.message, 'error');
+                }
             } finally {
                 if (saveBtn) {
                     saveBtn.disabled = false;
