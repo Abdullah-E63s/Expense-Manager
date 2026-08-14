@@ -1378,6 +1378,22 @@ textarea::placeholder {
     box-sizing: border-box !important;
   }
 
+  .chart-container {
+    padding: 16px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .chart-wrapper {
+    position: relative !important;
+    width: 100% !important;
+    height: 330px !important;
+    min-height: 320px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
   .dashboard {
     display: flex !important;
     flex-direction: column !important;
@@ -1594,16 +1610,16 @@ textarea::placeholder {
   }
 }
 
-/* Mobile ergonomics: on small screens, float neatly at the bottom */
-@media (max-width: 640px) {
+/* Mobile ergonomics: on small screens, float neatly at the top so it never covers the bottom navigation */
+@media (max-width: 768px) {
   #global-loading-overlay {
-    top: auto;
-    bottom: 24px;
-    transform: translateX(-50%) translateY(24px) scale(0.96);
+    top: 16px !important;
+    bottom: auto !important;
+    transform: translateX(-50%) translateY(-20px) scale(0.95) !important;
   }
 
   #global-loading-overlay.active {
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateX(-50%) translateY(0) scale(1) !important;
   }
 }
 
@@ -1627,39 +1643,40 @@ div[style*="z-index: 2000000000"] {
 }
 
 /* ==========================================================================
-   Web Pull-to-Refresh Indicator (Smooth Top Elastic Pull)
+   Web Pull-to-Refresh Indicator (Smooth Top Elastic Pull, No Logo)
    ========================================================================== */
 
 #pull-to-refresh-indicator {
   position: fixed;
-  top: -65px;
+  top: 14px;
   left: 50%;
-  transform: translateX(-50%) translateY(0);
+  transform: translateX(-50%) translateY(-80px);
   z-index: 10002;
   pointer-events: none;
   opacity: 0;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
 .ptr-content {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  padding: 8px 16px;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  padding: 7px 15px;
   border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 15px rgba(59, 130, 246, 0.25);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65), 0 0 16px rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
-.ptr-spinner-logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  object-fit: cover;
-  transition: transform 0.1s linear;
+.ptr-spinner-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8, 0 0 18px rgba(56, 189, 248, 0.6);
+  animation: ptrDotPulse 1s ease-in-out infinite alternate;
 }
 
 .ptr-text {
@@ -1669,13 +1686,19 @@ div[style*="z-index: 2000000000"] {
   letter-spacing: 0.2px;
 }
 
-.ptr-spin {
-  animation: ptrSpinAnim 0.75s linear infinite !important;
+.ptr-refreshing .ptr-spinner-dot {
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981, 0 0 20px rgba(16, 185, 129, 0.7);
+  animation: ptrDotPulse 0.5s ease-in-out infinite alternate;
 }
 
-@keyframes ptrSpinAnim {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.ptr-refreshing .ptr-text {
+  color: #34d399;
+}
+
+@keyframes ptrDotPulse {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  100% { transform: scale(1.25); opacity: 1; }
 }
 
 /* ==========================================================================

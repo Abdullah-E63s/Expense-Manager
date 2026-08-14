@@ -435,7 +435,6 @@ function initPullToRefresh() {
     let currentY = 0;
     let isPulling = false;
     let isRefreshing = false;
-    const PULL_THRESHOLD = 65;
 
     let indicator = document.getElementById('pull-to-refresh-indicator');
     if (!indicator) {
@@ -443,14 +442,13 @@ function initPullToRefresh() {
         indicator.id = 'pull-to-refresh-indicator';
         indicator.innerHTML = `
             <div class="ptr-content">
-                <img src="/static/images/logo.png" alt="Refreshing" class="ptr-spinner-logo">
+                <span class="ptr-spinner-dot"></span>
                 <span class="ptr-text">Pull to refresh</span>
             </div>
         `;
         document.body.prepend(indicator);
     }
 
-    const ptrLogo = indicator.querySelector('.ptr-spinner-logo');
     const ptrText = indicator.querySelector('.ptr-text');
 
     window.addEventListener('touchstart', (e) => {
@@ -469,18 +467,17 @@ function initPullToRefresh() {
         const diff = currentY - startY;
         const top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
 
-        if (diff > 5 && top <= 3) {
-            const pullDistance = Math.min(diff * 0.4, 85);
+        if (diff > 8 && top <= 3) {
+            const pullDistance = Math.min(diff * 0.42, 65);
             indicator.style.transform = `translateX(-50%) translateY(${pullDistance}px)`;
-            indicator.style.opacity = `${Math.min(pullDistance / 40, 1)}`;
+            indicator.style.opacity = `${Math.min(pullDistance / 25, 1)}`;
 
-            const rotation = (pullDistance / PULL_THRESHOLD) * 360;
-            if (ptrLogo) ptrLogo.style.transform = `rotate(${rotation}deg)`;
-
-            if (pullDistance >= 45) {
+            if (pullDistance >= 40) {
                 if (ptrText) ptrText.textContent = 'Release to refresh';
+                indicator.classList.add('ptr-ready');
             } else {
                 if (ptrText) ptrText.textContent = 'Pull to refresh';
+                indicator.classList.remove('ptr-ready');
             }
         }
     }, { passive: true });
@@ -491,12 +488,12 @@ function initPullToRefresh() {
         isPulling = false;
 
         const top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-        if (diff * 0.4 >= 45 && top <= 3) {
+        if (diff * 0.42 >= 40 && top <= 3) {
             isRefreshing = true;
-            indicator.style.transform = 'translateX(-50%) translateY(52px)';
+            indicator.style.transform = 'translateX(-50%) translateY(30px)';
             indicator.style.opacity = '1';
+            indicator.classList.add('ptr-refreshing');
             if (ptrText) ptrText.textContent = 'Refreshing...';
-            if (ptrLogo) ptrLogo.classList.add('ptr-spin');
 
             if (typeof showLoading === 'function') {
                 showLoading('Refreshing App...', 'Syncing latest data');
@@ -508,9 +505,9 @@ function initPullToRefresh() {
                     if (typeof window.loadAnalytics === 'function') await window.loadAnalytics();
                     if (typeof window.loadBudget === 'function') await window.loadBudget();
                     setTimeout(() => {
-                        indicator.style.transform = 'translateX(-50%) translateY(0)';
+                        indicator.style.transform = 'translateX(-50%) translateY(-80px)';
                         indicator.style.opacity = '0';
-                        if (ptrLogo) ptrLogo.classList.remove('ptr-spin');
+                        indicator.classList.remove('ptr-refreshing', 'ptr-ready');
                         isRefreshing = false;
                         if (typeof hideLoading === 'function') hideLoading();
                     }, 400);
@@ -521,8 +518,9 @@ function initPullToRefresh() {
                 window.location.reload();
             }
         } else {
-            indicator.style.transform = 'translateX(-50%) translateY(0)';
+            indicator.style.transform = 'translateX(-50%) translateY(-80px)';
             indicator.style.opacity = '0';
+            indicator.classList.remove('ptr-ready');
         }
         startY = 0;
         currentY = 0;

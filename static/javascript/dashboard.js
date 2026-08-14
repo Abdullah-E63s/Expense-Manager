@@ -492,6 +492,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = categories.map(cat => cat.amount);
         const backgroundColors = generateColors(labels.length);
 
+        const isMobile = window.innerWidth < 768;
+
         categoryChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -507,19 +509,21 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
+                cutout: isMobile ? '58%' : '65%',
                 layout: {
-                    padding: 20
+                    padding: isMobile ? 6 : 20
                 },
                 plugins: {
                     legend: {
-                        position: 'right',
+                        position: isMobile ? 'bottom' : 'right',
+                        align: isMobile ? 'center' : 'start',
                         labels: {
                             color: '#a0aabf',
-                            font: { family: "'Inter', sans-serif", size: 13, weight: '500' },
-                            padding: 20,
+                            font: { family: "'Inter', sans-serif", size: isMobile ? 12 : 13, weight: '500' },
+                            padding: isMobile ? 10 : 20,
                             usePointStyle: true,
-                            pointStyle: 'circle'
+                            pointStyle: 'circle',
+                            boxWidth: 8
                         }
                     },
                     tooltip: {
