@@ -478,9 +478,11 @@ document.addEventListener('DOMContentLoaded', function () {
         updateMonthlyChart(chartData.byMonth);
     }
 
-    // Update the category chart
+    // Update the category chart and render custom scrollable legend
     function updateCategoryChart(categories) {
         const ctx = document.getElementById('categoryChart')?.getContext('2d');
+        const legendContainer = document.getElementById('custom-category-legend');
+        const badge = document.getElementById('category-count-badge');
         if (!ctx) return;
 
         // Destroy existing chart if it exists
@@ -488,11 +490,25 @@ document.addEventListener('DOMContentLoaded', function () {
         if (existingChartObj) existingChartObj.destroy();
         if (categoryChart) categoryChart.destroy();
 
-        const labels = categories.map(cat => cat.name);
-        const data = categories.map(cat => cat.amount);
+        if (!categories || categories.length === 0) {
+            if (legendContainer) {
+                legendContainer.innerHTML = '<p class="empty-msg" style="padding: 10px 0; text-align: center;">No category expenses yet.</p>';
+            }
+            if (badge) badge.textContent = '';
+            return;
+        }
+
+        // Sort categories by amount descending so top spending is first
+        const sortedCategories = [...categories].sort((a, b) => (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0));
+
+        const labels = sortedCategories.map(cat => cat.name || 'Uncategorized');
+        const data = sortedCategories.map(cat => parseFloat(cat.amount) || 0);
+        const totalSum = data.reduce((acc, v) => acc + v, 0) || 1;
         const backgroundColors = generateColors(labels.length);
 
-        const isMobile = window.innerWidth < 768;
+        if (badge) {
+            badge.textContent = `${labels.length} total`;
+        }
 
         categoryChart = new Chart(ctx, {
             type: 'doughnut',
@@ -502,48 +518,82 @@ document.addEventListener('DOMContentLoaded', function () {
                     data: data,
                     backgroundColor: backgroundColors,
                     borderWidth: 2,
-                    borderColor: '#1a1d24', // match dark theme background
-                    hoverOffset: 6
+                    borderColor: '#0f172a', // match dark panel background
+                    hoverOffset: 8
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: isMobile ? '58%' : '65%',
+                cutout: '62%',
                 layout: {
-                    padding: isMobile ? 6 : 20
+                    padding: 8
                 },
                 plugins: {
                     legend: {
-                        position: isMobile ? 'bottom' : 'right',
-                        align: isMobile ? 'center' : 'start',
-                        labels: {
-                            color: '#a0aabf',
-                            font: { family: "'Inter', sans-serif", size: isMobile ? 12 : 13, weight: '500' },
-                            padding: isMobile ? 10 : 20,
-                            usePointStyle: true,
-                            pointStyle: 'circle',
-                            boxWidth: 8
-                        }
+                        display: false // Turned off internal canvas legend to eliminate clipping/floating dots
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(26, 29, 36, 0.95)',
-                        titleColor: '#fff',
-                        bodyColor: '#e2e8f0',
+                        backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#38bdf8',
                         bodyFont: { size: 14, weight: 'bold' },
-                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderColor: 'rgba(59, 130, 246, 0.4)',
                         borderWidth: 1,
                         padding: 12,
                         boxPadding: 6,
                         callbacks: {
                             label: function (context) {
-                                return ` $${context.raw.toFixed(2)}`;
+                                const val = parseFloat(context.raw) || 0;
+                                const pct = ((val / totalSum) * 100).toFixed(1);
+                                return ` $${val.toFixed(2)} (${pct}%)`;
                             }
                         }
                     }
                 }
             }
         });
+
+        // Render Custom HTML Legend List (Scrollable, supports 1 to 100+ categories with stats)
+        if (legendContainer) {
+            legendContainer.innerHTML = '';
+            sortedCategories.forEach((cat, idx) => {
+                const color = backgroundColors[idx];
+                const amount = parseFloat(cat.amount) || 0;
+                const pct = ((amount / totalSum) * 100).toFixed(1);
+
+                const item = document.createElement('div');
+                item.className = 'category-legend-item';
+                item.setAttribute('role', 'button');
+                item.setAttribute('tabindex', '0');
+                item.innerHTML = `
+                    <div class="category-legend-left">
+                        <span class="category-color-dot" style="background: ${color}; box-shadow: 0 0 6px ${color}aa;"></span>
+                        <span class="category-legend-name" title="${cat.name}">${cat.name}</span>
+                    </div>
+                    <div class="category-legend-right">
+                        <span class="category-legend-amount">$${amount.toFixed(2)}</span>
+                        <span class="category-legend-pct">${pct}%</span>
+                    </div>
+                `;
+
+                // Interactive highlight on hover
+                item.addEventListener('mouseenter', () => {
+                    if (categoryChart) {
+                        categoryChart.setActiveElements([{ datasetIndex: 0, index: idx }]);
+                        categoryChart.update();
+                    }
+                });
+                item.addEventListener('mouseleave', () => {
+                    if (categoryChart) {
+                        categoryChart.setActiveElements([]);
+                        categoryChart.update();
+                    }
+                });
+
+                legendContainer.appendChild(item);
+            });
+        }
     }
 
     // Update the monthly chart
@@ -833,25 +883,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Local message function is removed - using common.js version
 
-    // Generate premium distinct colors for charts
+    // Generate distinct vibrant colors for up to 100+ categories using golden angle distribution
     function generateColors(count) {
-        // High-end UI dashboard palette
-        const premiumPalette = [
+        const basePalette = [
             '#64ffda', // Neon Teal
             '#8b5cf6', // Vivid Purple
             '#f43f5e', // Rose Red
             '#3b82f6', // Bright Blue
+            '#f97316', // Vibrant Orange
             '#eab308', // Sunflower Gold
             '#10b981', // Emerald Green
             '#ec4899', // Pink
-            '#f97316', // Orange
             '#06b6d4', // Cyan
+            '#a855f7', // Violet
+            '#f59e0b', // Amber
+            '#14b8a6', // Teal
+            '#6366f1', // Indigo
+            '#ef4444', // Red
             '#84cc16'  // Lime
         ];
 
         const colors = [];
         for (let i = 0; i < count; i++) {
-            colors.push(premiumPalette[i % premiumPalette.length]);
+            if (i < basePalette.length) {
+                colors.push(basePalette[i]);
+            } else {
+                // Golden ratio angle (137.5 deg) ensures maximum perceptual distinction for 100+ items
+                const hue = (i * 137.5) % 360;
+                colors.push(`hsl(${hue}, 80%, 60%)`);
+            }
         }
         return colors;
     }

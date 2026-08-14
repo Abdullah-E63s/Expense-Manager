@@ -67,13 +67,23 @@
         <!-- Charts Section -->
         <div class="charts-section">
             <div class="panel chart-container">
-                <h3>Expenses by Category</h3>
-                <div class="chart-wrapper">
-                    <canvas id="categoryChart"></canvas>
+                <div class="panel-header">
+                    <h3>Expenses by Category</h3>
+                    <span class="badge-count" id="category-count-badge"></span>
+                </div>
+                <div class="category-chart-layout">
+                    <div class="chart-wrapper donut-canvas-wrap">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="category-legend-list" id="custom-category-legend">
+                        <!-- Populated by JavaScript: Supports 100+ categories with scroll & amounts -->
+                    </div>
                 </div>
             </div>
             <div class="panel chart-container">
-                <h3>Monthly Spending</h3>
+                <div class="panel-header">
+                    <h3>Monthly Spending</h3>
+                </div>
                 <div class="chart-wrapper">
                     <canvas id="monthlyChart"></canvas>
                 </div>
