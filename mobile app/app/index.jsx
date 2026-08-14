@@ -219,6 +219,7 @@ export default function App() {
         overScrollMode="never"
         scalesPageToFit={false}
         textZoom={100}
+        pullToRefreshEnabled={true}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
       />
