@@ -57,12 +57,15 @@ if ($LASTEXITCODE -eq 0) {
 # Step 3: Push to Hugging Face Spaces
 Write-Host ""
 Write-Host "3️⃣ [HUGGING FACE] Syncing to HuggingFace Space..." -ForegroundColor Green
-git push hf main 2>&1
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "   ✅ Hugging Face Space push succeeded!" -ForegroundColor Gray
+if (Test-Path "hf_upload.py") {
+    python hf_upload.py
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "   ✅ Hugging Face Space upload succeeded via HF API!" -ForegroundColor Gray
+    } else {
+        Write-Host "   ℹ️ HF API returned status $LASTEXITCODE. Attempting git push..." -ForegroundColor DarkYellow
+        git push hf main 2>&1
+    }
 } else {
-    Write-Host "   ℹ️ Re-attempting HF push with pull --rebase..." -ForegroundColor DarkYellow
-    git pull hf main --rebase 2>&1
     git push hf main 2>&1
 }
 
