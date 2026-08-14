@@ -6,6 +6,14 @@ param (
 
 $ErrorActionPreference = "Continue"
 
+$AppDir = $PSScriptRoot
+if (Test-Path (Join-Path $PSScriptRoot "expense manager (web app)")) {
+    $AppDir = Join-Path $PSScriptRoot "expense manager (web app)"
+}
+Push-Location $AppDir
+
+try {
+
 Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host "  EXPENSE MANAGER -- MULTI-CLOUD SYNC WORKFLOW" -ForegroundColor Cyan
@@ -63,3 +71,7 @@ Write-Host "==========================================================" -Foregro
 Write-Host "  ALL PLATFORMS SYNCHRONIZED SUCCESSFULLY!" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
+}
+finally {
+    Pop-Location
+}
