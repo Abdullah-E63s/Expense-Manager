@@ -31,12 +31,14 @@
             <div class="brand-name">Expense Manager</div>
         </div>
         <div class="header-actions">
-            <img id="header-avatar" class="avatar-small" src="/static/images/pfp.jpg" alt="Avatar"
-                onerror="this.onerror=null; this.src='/static/images/pfp.jpg'">
-            <a href="/account" class="btn">
+            <a href="/account" class="header-avatar-link" title="My Account">
+                <img id="header-avatar" class="avatar-small" src="/static/images/pfp.jpg" alt="Avatar"
+                    onerror="this.onerror=null; this.src='/static/images/pfp.jpg'">
+            </a>
+            <a href="/account" class="btn header-nav-btn">
                 My Account
             </a>
-            <button id="logout-btn" class="btn secondary">Logout</button>
+            <button id="logout-btn" class="btn secondary header-nav-btn">Logout</button>
         </div>
     </header>
     <div class="container">

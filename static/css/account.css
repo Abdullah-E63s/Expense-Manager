@@ -251,6 +251,11 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+    .header-actions .btn,
+    .back-to-dashboard {
+        display: none !important;
+    }
+
     .container {
         margin: 0 auto !important;
         padding: 12px 14px 85px 14px !important;
