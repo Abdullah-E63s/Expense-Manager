@@ -357,6 +357,13 @@ def pwa_manifest():
     return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
 
 
+@app.route('/download')
+def download_apk():
+    """Permanent direct redirect to the latest compiled Android APK artifact."""
+    latest_apk_url = "https://expo.dev/artifacts/eas/Wt4Ai_Do4nq-AR34ox3aZa84X2jYJ__ISXRmGBZc3Js.apk"
+    return redirect(latest_apk_url)
+
+
 @app.route('/health')
 def health():
     """Health check endpoint — required for deployment platforms."""
