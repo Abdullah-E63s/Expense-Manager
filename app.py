@@ -419,6 +419,17 @@ def logout():
     return redirect(url_for('root'))
 
 
+# ── Public Mobile App Download ────────────────────────────────────────────────
+@app.route('/download')
+@app.route('/download-apk')
+@app.route('/download-app')
+@app.route('/app.apk')
+def download_app():
+    """Public direct download for the Android APK build."""
+    DIRECT_APK_URL = 'https://expo.dev/artifacts/eas/U56UjgMGopQqwknMetBRXudn3_Sb38QoV1PiNl8F2pY.apk'
+    return redirect(DIRECT_APK_URL, code=302)
+
+
 # ── Development runner ────────────────────────────────────────────────────────
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
