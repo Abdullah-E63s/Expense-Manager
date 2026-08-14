@@ -1678,4 +1678,23 @@ div[style*="z-index: 2000000000"] {
   to { transform: rotate(360deg); }
 }
 
+/* ==========================================================================
+   Hide Download APK Links on Mobile & inside Mobile App
+   ========================================================================== */
+
+.download-apk-link,
+a[href*="/download"],
+a[href*="app.apk"] {
+  display: none !important;
+}
+
+/* Only show on Desktop / Laptop screens */
+@media (min-width: 1024px) {
+  .download-apk-link,
+  a.download-apk-link[href*="/download"] {
+    display: inline-block !important;
+  }
+}
+
+
 
