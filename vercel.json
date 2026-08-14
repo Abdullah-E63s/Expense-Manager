@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/download",
+      "destination": "https://expo.dev/artifacts/eas/Wt4Ai_Do4nq-AR34ox3aZa84X2jYJ__ISXRmGBZc3Js.apk",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
