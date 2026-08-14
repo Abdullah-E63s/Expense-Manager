@@ -1,7 +1,7 @@
 {
   "name": "expense-manager-mobile",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "expo-router/entry",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "axios": "^1.18.1",
