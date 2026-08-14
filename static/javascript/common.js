@@ -93,14 +93,14 @@ function handleLogout() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Global Action & Processing Loading Screen (Glowing Spinning Logo)
+// Global Floating Action HUD Pill (Glowing Spinning Logo - Non-Blocking)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 let _loadingTimeout = null;
 let _activeRequestsCount = 0;
 
 /**
- * Ensure the loading overlay DOM element exists on the page
+ * Ensure the non-blocking floating HUD pill DOM element exists on the page
  */
 function ensureLoadingOverlay() {
     let overlay = document.getElementById('global-loading-overlay');
@@ -114,9 +114,13 @@ function ensureLoadingOverlay() {
                     <div class="spinner-logo-ring"></div>
                     <img src="/static/images/logo.png" alt="Expense Manager" class="spinner-logo-img" onerror="this.src='/static/images/logo.png'">
                 </div>
-                <div id="global-loading-title" class="loading-text-title">Processing...</div>
-                <div id="global-loading-sub" class="loading-text-subtitle">Connecting to server, please wait</div>
-                <div class="loading-progress-bar"></div>
+                <div class="loading-text-container">
+                    <div id="global-loading-title" class="loading-text-title">Processing...</div>
+                    <div id="global-loading-sub" class="loading-text-subtitle">Connecting to server</div>
+                </div>
+                <div class="loading-indicator-badge">
+                    <div class="loading-pulse-dot"></div>
+                </div>
             </div>
         `;
         document.body.appendChild(overlay);
@@ -125,11 +129,12 @@ function ensureLoadingOverlay() {
 }
 
 /**
- * Show the global spinning logo loading overlay
- * @param {string} title - Main loading title
- * @param {string} subtitle - Subtitle or helpful status
+ * Show the non-blocking floating action HUD pill with custom title & subtitle
+ * @param {string} title - Action description (e.g. "Changing Profile Pic...", "Adding Budget...")
+ * @param {string} subtitle - Helpful context (e.g. "Uploading photo", "Saving target")
+ * @param {number} autoDismissMs - Optional auto dismiss time in ms
  */
-function showLoading(title = 'Processing...', subtitle = 'Connecting to server, please wait') {
+function showLoading(title = 'Processing...', subtitle = 'Connecting to server', autoDismissMs = 25000) {
     const overlay = ensureLoadingOverlay();
     const titleEl = document.getElementById('global-loading-title');
     const subEl = document.getElementById('global-loading-sub');
@@ -139,15 +144,17 @@ function showLoading(title = 'Processing...', subtitle = 'Connecting to server, 
     
     overlay.classList.add('active');
     
-    // Safety auto-dismiss after 35 seconds to avoid locking the UI permanently
+    // Auto-dismiss safety timer so HUD never stays stuck
     if (_loadingTimeout) clearTimeout(_loadingTimeout);
-    _loadingTimeout = setTimeout(() => {
-        hideLoading();
-    }, 35000);
+    if (autoDismissMs > 0) {
+        _loadingTimeout = setTimeout(() => {
+            hideLoading();
+        }, autoDismissMs);
+    }
 }
 
 /**
- * Hide the global spinning logo loading overlay
+ * Hide the floating action HUD pill
  */
 function hideLoading() {
     const overlay = document.getElementById('global-loading-overlay');
@@ -161,7 +168,113 @@ function hideLoading() {
 }
 
 /**
- * Automatically hook fetch calls to show the loading screen on background actions
+ * Resolve the exact task name based on request URL and HTTP Method
+ */
+function resolveTaskMessage(url, options = {}) {
+    const method = (options.method || (options.body ? 'POST' : 'GET')).toUpperCase();
+    const u = (typeof url === 'string' ? url : (url?.url || '')).toLowerCase();
+
+    // 1. Receipt & AI YOLO OCR
+    if (u.includes('/api/yolo/detect') || u.includes('/detect')) {
+        return { title: 'Processing Receipt...', sub: 'Running AI YOLO Neural OCR' };
+    }
+
+    // 2. Profile Picture / Avatar
+    if (u.includes('profile-picture') || u.includes('avatar')) {
+        if (method === 'DELETE') {
+            return { title: 'Deleting Profile Picture...', sub: 'Resetting to default avatar' };
+        }
+        return { title: 'Changing Profile Pic...', sub: 'Uploading & updating image' };
+    }
+
+    // 3. User Profile & Account
+    if (u.includes('/api/auth/account/profile') || u.includes('/api/user/profile')) {
+        if (method === 'POST' || method === 'PUT') {
+            return { title: 'Updating Profile...', sub: 'Saving account preferences' };
+        }
+        return { title: 'Opening Account...', sub: 'Loading profile details' };
+    }
+
+    if (u.includes('/delete-account') || u.includes('/account/delete') || (u.includes('/api/auth/account') && method === 'DELETE')) {
+        return { title: 'Deleting Account...', sub: 'Removing user records' };
+    }
+
+    if (u.includes('/change-password') || u.includes('/reset-password') || u.includes('/set-password')) {
+        return { title: 'Changing Password...', sub: 'Updating security credentials' };
+    }
+
+    if (u.includes('/forgot-password')) {
+        return { title: 'Sending Password Reset...', sub: 'Sending recovery link to email' };
+    }
+
+    if (u.includes('/send-verification') || u.includes('/verify-code') || u.includes('/verify-email') || u.includes('/resend-code')) {
+        return { title: 'Verifying Email...', sub: 'Checking authentication code' };
+    }
+
+    // 4. Authentication (Login / Signup / Google / Logout)
+    if (u.includes('/api/auth/login')) {
+        return { title: 'Signing In...', sub: 'Verifying your credentials' };
+    }
+
+    if (u.includes('/api/auth/google')) {
+        return { title: 'Signing In with Google...', sub: 'Authenticating with Google OAuth' };
+    }
+
+    if (u.includes('/api/auth/signup')) {
+        return { title: 'Creating Account...', sub: 'Setting up your new profile' };
+    }
+
+    if (u.includes('/api/auth/logout')) {
+        return { title: 'Logging Out...', sub: 'Clearing user session' };
+    }
+
+    // 5. Budget Management
+    if (u.includes('/budget')) {
+        if (method === 'DELETE') {
+            return { title: 'Deleting Budget...', sub: 'Clearing monthly spending limit' };
+        }
+        if (method === 'POST' || method === 'PUT') {
+            return { title: 'Adding Budget...', sub: 'Setting monthly spending goal' };
+        }
+        return { title: 'Loading Budget...', sub: 'Recalculating targets' };
+    }
+
+    // 6. Expense Management
+    if (u.includes('/api/expenses/all') && method === 'DELETE') {
+        return { title: 'Deleting All Expenses...', sub: 'Clearing transaction history' };
+    }
+
+    if (u.includes('/api/expenses/export') || u.includes('/export')) {
+        return { title: 'Exporting Report...', sub: 'Generating file download' };
+    }
+
+    if (u.includes('/api/expenses/analytics')) {
+        return { title: 'Generating Analytics...', sub: 'Rendering financial trends' };
+    }
+
+    if (u.includes('/api/expenses')) {
+        if (method === 'POST') {
+            return { title: 'Saving Expense...', sub: 'Recording new transaction' };
+        }
+        if (method === 'PUT' || method === 'PATCH') {
+            return { title: 'Updating Expense...', sub: 'Saving modifications' };
+        }
+        if (method === 'DELETE') {
+            return { title: 'Deleting Expense...', sub: 'Removing from transaction log' };
+        }
+        return { title: 'Loading Expenses...', sub: 'Refreshing transaction records' };
+    }
+
+    // 7. Categories
+    if (u.includes('/categories')) {
+        return { title: 'Updating Categories...', sub: 'Syncing category list' };
+    }
+
+    return { title: 'Processing...', sub: 'Communicating with server' };
+}
+
+/**
+ * Automatically hook fetch calls to show the non-blocking HUD with exact task names
  */
 function setupGlobalFetchInterceptor() {
     if (window._fetchHooked) return;
@@ -169,32 +282,17 @@ function setupGlobalFetchInterceptor() {
 
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
-        const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+        const url = args[0];
+        const options = args[1] || {};
+        const urlStr = typeof url === 'string' ? url : (url?.url || '');
         
-        // Skip background heartbeats or analytics polling if any
-        const isBackgroundCheck = url.includes('/heartbeat') || url.includes('/analytics/poll');
+        // Skip silent background heartbeats or analytics pollers
+        const isBackgroundCheck = urlStr.includes('/heartbeat') || urlStr.includes('/poll') || urlStr.includes('/config');
         
         if (!isBackgroundCheck) {
             _activeRequestsCount++;
-            
-            let message = 'Processing...';
-            let sub = 'Communicating with server';
-            
-            if (url.includes('/api/yolo/detect') || url.includes('/detect')) {
-                message = 'Analyzing Receipt with AI...';
-                sub = 'Running God Mode YOLO Neural OCR';
-            } else if (url.includes('/api/auth/login') || url.includes('/api/auth/google')) {
-                message = 'Signing In...';
-                sub = 'Verifying credentials securely';
-            } else if (url.includes('/api/expenses')) {
-                message = 'Saving Expense...';
-                sub = 'Updating your financial records';
-            } else if (url.includes('/api/auth/logout')) {
-                message = 'Logging Out...';
-                sub = 'Clearing session';
-            }
-            
-            showLoading(message, sub);
+            const task = resolveTaskMessage(urlStr, options);
+            showLoading(task.title, task.sub);
         }
 
         return originalFetch.apply(this, args)
@@ -220,38 +318,110 @@ function setupGlobalFetchInterceptor() {
 }
 
 /**
- * Auto-attach loading indicators to form submissions and action buttons
+ * Auto-attach loading HUD indicators to form submissions, action buttons, and navigation
  */
 function setupActionListeners() {
     ensureLoadingOverlay();
     setupGlobalFetchInterceptor();
 
-    // Attach to standard forms
+    // Form submissions
     document.addEventListener('submit', function(e) {
         const form = e.target;
         if (!form) return;
         
-        const formId = form.id || '';
+        const formId = (form.id || '').toLowerCase();
         if (formId === 'login-form') {
             showLoading('Signing In...', 'Verifying your account details');
         } else if (formId === 'signup-form') {
-            showLoading('Creating Account...', 'Setting up your secure space');
+            showLoading('Creating Account...', 'Setting up your secure profile');
         } else if (formId === 'expense-form') {
             showLoading('Saving Expense...', 'Adding to your financial log');
-        } else if (formId === 'budget-form') {
-            showLoading('Updating Budget...', 'Recalculating monthly target');
-        } else if (formId.includes('account') || formId.includes('profile')) {
-            showLoading('Updating Account...', 'Saving your preferences');
+        } else if (formId === 'budget-form' || formId.includes('budget')) {
+            showLoading('Adding Budget...', 'Setting monthly target');
+        } else if (formId.includes('profile')) {
+            showLoading('Updating Profile...', 'Saving account preferences');
+        } else if (formId.includes('password')) {
+            showLoading('Changing Password...', 'Applying new security key');
         } else {
             showLoading('Processing...', 'Please wait a moment');
         }
     }, true);
 
-    // Auto-attach to Google button click
+    // Interactive button clicks
     document.addEventListener('click', function(e) {
-        const googleBtn = e.target.closest('#google-login-btn') || e.target.closest('#google-signin-btn');
+        const target = e.target;
+        if (!target) return;
+
+        // Google login button
+        const googleBtn = target.closest('#google-login-btn') || target.closest('#google-signin-btn');
         if (googleBtn) {
-            showLoading('Connecting to Google...', 'Redirecting to secure authorization');
+            showLoading('Signing In with Google...', 'Connecting to secure authorization');
+            return;
+        }
+
+        // Avatar change or delete
+        const avatarChangeBtn = target.closest('#change-avatar-btn');
+        if (avatarChangeBtn) {
+            showLoading('Changing Profile Pic...', 'Choose a photo to upload', 6000);
+            return;
+        }
+        const avatarDeleteBtn = target.closest('#delete-avatar-btn');
+        if (avatarDeleteBtn) {
+            showLoading('Deleting Profile Picture...', 'Resetting to default avatar');
+            return;
+        }
+
+        // Budget delete
+        const budgetDeleteBtn = target.closest('#delete-budget-btn');
+        if (budgetDeleteBtn) {
+            showLoading('Deleting Budget...', 'Clearing monthly spending limit');
+            return;
+        }
+
+        // Delete all expenses
+        const deleteAllBtn = target.closest('#delete-all-btn');
+        if (deleteAllBtn) {
+            showLoading('Deleting All Expenses...', 'Clearing transaction records');
+            return;
+        }
+
+        // Single expense delete or edit
+        const expenseDeleteBtn = target.closest('.delete-btn') || target.closest('[data-action="delete"]');
+        if (expenseDeleteBtn) {
+            showLoading('Deleting Expense...', 'Removing transaction');
+            return;
+        }
+        const expenseEditBtn = target.closest('.edit-btn') || target.closest('[data-action="edit"]');
+        if (expenseEditBtn) {
+            showLoading('Opening Expense...', 'Loading transaction for editing', 4000);
+            return;
+        }
+
+        // Navigation links
+        const navLink = target.closest('a[href]');
+        if (navLink) {
+            const href = (navLink.getAttribute('href') || '').toLowerCase();
+            if (href === '/account' || href.includes('account.html')) {
+                showLoading('Opening Account...', 'Loading profile & preferences');
+            } else if (href === '/dashboard' || href === '/') {
+                showLoading('Opening Dashboard...', 'Loading financial overview');
+            } else if (href.includes('login')) {
+                showLoading('Opening Sign In...', 'Loading login form');
+            } else if (href.includes('signup')) {
+                showLoading('Opening Sign Up...', 'Loading registration form');
+            }
+        }
+    }, true);
+
+    // File input changes (Avatar & Receipt uploads)
+    document.addEventListener('change', function(e) {
+        const input = e.target;
+        if (!input || input.type !== 'file') return;
+        
+        if (input.id === 'avatar-input') {
+            showLoading('Changing Profile Pic...', 'Uploading and updating image');
+        } else if (input.id === 'receipt-file' || input.id === 'receipt-input' || input.name === 'receipt') {
+            showLoading('Processing Receipt...', 'Running AI YOLO Neural OCR');
         }
     }, true);
 }
@@ -264,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn && !logoutBtn.dataset.boundLogout) {
         logoutBtn.addEventListener('click', function() {
-            showLoading('Logging out...', 'Securing your session');
+            showLoading('Logging Out...', 'Clearing session securely');
             handleLogout();
         });
         logoutBtn.dataset.boundLogout = '1';
@@ -282,3 +452,4 @@ window.togglePasswordVisibility = togglePasswordVisibility;
 window.showMessage = showMessage;
 window.showLoading = showLoading;
 window.hideLoading = hideLoading;
+
