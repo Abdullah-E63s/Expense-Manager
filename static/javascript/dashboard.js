@@ -243,39 +243,164 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Current active receipt in lightbox
+    let _activeLightboxReceipt = null;
+
+    // Open receipt modal lightbox
+    function openReceiptLightbox(receipt) {
+        if (!receipt || !receipt.picture_url) return;
+        _activeLightboxReceipt = receipt;
+
+        const modal = document.getElementById('receipt-lightbox-modal');
+        const img = document.getElementById('lightbox-img');
+        const titleEl = document.getElementById('lightbox-receipt-title');
+        const dateEl = document.getElementById('lightbox-receipt-date');
+        const amountEl = document.getElementById('lightbox-amount');
+        const categoryEl = document.getElementById('lightbox-category');
+        const descEl = document.getElementById('lightbox-description');
+        const rescanBtn = document.getElementById('lightbox-rescan-btn');
+        const editBtn = document.getElementById('lightbox-edit-btn');
+        const deleteBtn = document.getElementById('lightbox-delete-btn');
+
+        if (!modal) return;
+
+        const date = new Date(receipt.created_at || receipt.date || Date.now()).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        if (img) img.src = receipt.picture_url;
+        if (titleEl) titleEl.textContent = receipt.description || 'Receipt Document';
+        if (dateEl) dateEl.textContent = date;
+        if (amountEl) amountEl.textContent = `$${parseFloat(receipt.value || receipt.amount || 0).toFixed(2)}`;
+        if (categoryEl) categoryEl.textContent = receipt.category || 'General';
+        if (descEl) descEl.textContent = receipt.description || 'No additional notes provided';
+
+        // Bind Re-Scan with AI
+        if (rescanBtn) {
+            rescanBtn.onclick = async () => {
+                try {
+                    closeReceiptLightbox();
+                    if (typeof window.showLoading === 'function') {
+                        window.showLoading('Processing Receipt...', 'Fetching image for AI YOLO OCR');
+                    }
+                    const res = await fetch(receipt.picture_url);
+                    if (!res.ok) throw new Error('Could not fetch receipt image for scanning');
+                    const blob = await res.blob();
+                    if (typeof window.runYoloScan === 'function') {
+                        await window.runYoloScan(blob, 'receipt_photo.jpg');
+                    } else {
+                        alert('AI Scanner is loading, please try again in a moment.');
+                    }
+                } catch (err) {
+                    console.error('Error re-scanning receipt:', err);
+                    alert('Could not re-scan receipt: ' + err.message);
+                }
+            };
+        }
+
+        // Bind Edit button
+        if (editBtn) {
+            editBtn.onclick = () => {
+                closeReceiptLightbox();
+                handleEditExpense(receipt.id);
+            };
+        }
+
+        // Bind Delete button
+        if (deleteBtn) {
+            deleteBtn.onclick = async () => {
+                closeReceiptLightbox();
+                await handleDeleteExpense(receipt.id);
+            };
+        }
+
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Close receipt modal lightbox
+    function closeReceiptLightbox() {
+        const modal = document.getElementById('receipt-lightbox-modal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        _activeLightboxReceipt = null;
+    }
+
+    // Attach lightbox close event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        const backBtn = document.getElementById('lightbox-back-btn');
+        const closeBtn = document.getElementById('lightbox-close-btn');
+        const backdrop = document.getElementById('lightbox-backdrop');
+
+        if (backBtn) backBtn.addEventListener('click', closeReceiptLightbox);
+        if (closeBtn) closeBtn.addEventListener('click', closeReceiptLightbox);
+        if (backdrop) backdrop.addEventListener('click', closeReceiptLightbox);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeReceiptLightbox();
+        });
+    });
+
     // Update the receipt gallery
     function updateReceiptGallery(expenses) {
         const gallery = document.getElementById('receipts-gallery');
+        const badge = document.getElementById('receipt-count-badge');
         if (!gallery) return;
 
         // Filter for expenses that have a picture_url
         const receipts = (expenses || []).filter(e => e.picture_url);
 
+        if (badge) {
+            badge.textContent = receipts.length > 0 ? `${receipts.length}` : '';
+        }
+
         if (receipts.length === 0) {
-            gallery.innerHTML = '<p class="empty-msg">No receipts uploaded yet.</p>';
+            gallery.innerHTML = '<p class="empty-msg">No receipts uploaded yet. Use the AI Scanner above to scan and save your first receipt!</p>';
             return;
         }
 
         gallery.innerHTML = '';
 
-        // Show last 12 receipts to keep it clean
-        receipts.slice(0, 12).forEach(receipt => {
+        // Show receipts
+        receipts.forEach(receipt => {
             const item = document.createElement('div');
             item.className = 'receipt-item';
+            item.setAttribute('role', 'button');
+            item.setAttribute('tabindex', '0');
+            item.setAttribute('aria-label', `View receipt for ${receipt.description || 'Expense'}`);
 
-            const date = new Date(receipt.created_at).toLocaleDateString();
+            const date = new Date(receipt.created_at || receipt.date || Date.now()).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
 
             item.innerHTML = `
-                <img src="${receipt.picture_url}" alt="Receipt" onerror="this.src='/static/images/logo.png'">
+                <div class="receipt-thumb-wrap">
+                    <img src="${receipt.picture_url}" alt="Receipt" loading="lazy" onerror="this.src='/static/images/logo.png'">
+                    <div class="receipt-scan-overlay">
+                        <span class="receipt-view-badge">👁 View / Re-Scan</span>
+                    </div>
+                </div>
                 <div class="receipt-info">
-                    <span>${date}</span>
-                    <span style="float: right;">$${receipt.value.toFixed(2)}</span>
+                    <span class="receipt-date-txt">${date}</span>
+                    <span class="receipt-price-txt">$${parseFloat(receipt.value || receipt.amount || 0).toFixed(2)}</span>
                 </div>
             `;
 
-            // Add click listener to show full image
+            // Open modern lightbox on click
             item.addEventListener('click', () => {
-                window.open(receipt.picture_url, '_blank');
+                openReceiptLightbox(receipt);
+            });
+
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openReceiptLightbox(receipt);
+                }
             });
 
             gallery.appendChild(item);
