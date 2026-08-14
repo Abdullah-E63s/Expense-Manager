@@ -19,7 +19,7 @@
 
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
-  StyleSheet, StatusBar, Platform, Text, TouchableOpacity, View, ActivityIndicator,
+  StyleSheet, StatusBar, Platform, Text, TouchableOpacity, View, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -118,10 +118,9 @@ export default function App() {
       } else if (msg.type === 'GOOGLE_AUTH_BLOCKED') {
         // Google blocked the OAuth in WebView (shows policy error page).
         // Show alert and go back.
-        alert(
-          'Google Sign-In was blocked in this browser view.\n\n' +
-          'This can happen on some devices. Please try again — ' +
-          'on a second attempt Google often allows it.'
+        Alert.alert(
+          'Google Sign-In',
+          'Google Sign-In was blocked in this browser view.\n\nPlease try again — on a second attempt Google often allows it.'
         );
         navigateTo(BASE_URL);
 

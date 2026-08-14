@@ -8,6 +8,11 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#070d1a",
     "scheme": "expensemanager",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#070d1a"
+    },
     "plugins": [
       "expo-router",
       [
@@ -30,14 +35,30 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#070d1a",
-        "foregroundImage": "./assets/icon.png"
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#070d1a"
       },
-      "package": "com.expensemanager.mobile"
+      "package": "com.expensemanager.mobile",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "experiments": {}
+    "experiments": {},
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2e02da0e-0e91-459f-9545-28adf34006ad"
+      }
+    },
+    "owner": "ghost993"
   }
 }

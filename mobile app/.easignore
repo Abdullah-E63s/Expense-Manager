@@ -1,0 +1,30 @@
+# Exclude large directories not needed for EAS cloud builds
+# node_modules are reinstalled by the EAS build server from package.json
+node_modules/
+
+# Expo cache
+.expo/
+
+# Test files
+__tests__/
+testing/
+dist/
+
+# Git
+.git/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files with secrets (EAS uses its own env vars)
+.env.local
+.env.*.local
