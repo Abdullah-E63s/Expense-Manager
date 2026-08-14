@@ -179,24 +179,41 @@ export default function App() {
   }, []);
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (webviewError) {
+    const isOffline =
+      !webviewError.statusCode ||
+      (webviewError.description &&
+        (webviewError.description.includes('ERR_INTERNET_DISCONNECTED') ||
+          webviewError.description.includes('ERR_NAME_NOT_RESOLVED') ||
+          webviewError.description.includes('ERR_CONNECTION_TIMED_OUT') ||
+          webviewError.description.includes('ERR_ADDRESS_UNREACHABLE')));
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#0a0a0f" />
+        <View style={styles.overlay}>
+          <Text style={styles.overlayIcon}>📡</Text>
+          <Text style={styles.overlayTitle}>
+            {isOffline ? 'You are Offline' : '⚠️ Connection Error'}
+          </Text>
+          <Text style={styles.overlayDesc}>
+            {isOffline
+              ? 'Could not connect to Expense Manager. Please check your Wi-Fi or mobile data, then tap Try Again.'
+              : webviewError.statusCode
+              ? `Server returned HTTP ${webviewError.statusCode}. Please try again shortly.`
+              : 'Network request failed. Tap below to retry.'}
+          </Text>
+          <TouchableOpacity style={styles.btn} onPress={handleRetry} activeOpacity={0.8}>
+            <Text style={styles.btnText}>🔄 Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0a0a0f" />
-
-      {/* Error overlay */}
-      {webviewError && (
-        <View style={styles.overlay}>
-          <Text style={styles.overlayTitle}>⚠️ Page failed to load</Text>
-          <Text style={styles.overlayDesc}>
-            {webviewError.statusCode
-              ? `HTTP ${webviewError.statusCode}`
-              : webviewError.description || 'Network error'}
-          </Text>
-          <TouchableOpacity style={styles.btn} onPress={handleRetry}>
-            <Text style={styles.btnText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <WebView
         key={`wv-${retryCount}`}     // remount on retry
@@ -217,18 +234,7 @@ export default function App() {
         onMessage={onMessage}
         onHttpError={onHttpError}
         onError={onError}
-        renderError={() => (
-          <View style={styles.overlay}>
-            <Text style={styles.overlayIcon}>📡</Text>
-            <Text style={styles.overlayTitle}>You are Offline</Text>
-            <Text style={styles.overlayDesc}>
-              Could not connect to the network. Your saved data is stored securely and offline changes will sync once reconnected.
-            </Text>
-            <TouchableOpacity style={styles.btn} onPress={handleRetry}>
-              <Text style={styles.btnText}>Retry Connection</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        renderError={() => null}
         bounces={true}
         overScrollMode="always"
         scalesPageToFit={false}
