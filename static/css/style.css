@@ -1006,19 +1006,30 @@ textarea::placeholder {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(59, 130, 246, 0.18);
   color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  padding: 7px 12px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 8px 14px;
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+  user-select: none;
+  position: relative;
+  z-index: 10020;
   transition: all 0.15s ease;
 }
 
-.lightbox-back-btn:hover {
-  background: rgba(59, 130, 246, 0.3);
+.lightbox-back-btn * {
+  pointer-events: none !important;
+}
+
+.lightbox-back-btn:hover,
+.lightbox-back-btn:active {
+  background: rgba(59, 130, 246, 0.35);
   color: #fff;
   transform: translateX(-2px);
 }
@@ -1049,20 +1060,31 @@ textarea::placeholder {
 .lightbox-close-btn {
   background: rgba(255, 255, 255, 0.08);
   color: #94a3b8;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  width: 32px;
-  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  font-size: 15px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+  user-select: none;
+  position: relative;
+  z-index: 10020;
   transition: all 0.15s ease;
 }
 
-.lightbox-close-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
+.lightbox-close-btn * {
+  pointer-events: none !important;
+}
+
+.lightbox-close-btn:hover,
+.lightbox-close-btn:active {
+  background: rgba(239, 68, 68, 0.25);
   color: #ef4444;
 }
 

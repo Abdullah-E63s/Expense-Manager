@@ -201,10 +201,10 @@
 
         <!-- Receipt Image Lightbox Modal with Back & Re-Scan Buttons -->
         <div id="receipt-lightbox-modal" class="lightbox-modal" style="display: none;">
-            <div class="lightbox-backdrop" id="lightbox-backdrop"></div>
+            <div class="lightbox-backdrop" id="lightbox-backdrop" onclick="window.closeReceiptLightbox && window.closeReceiptLightbox()"></div>
             <div class="lightbox-content">
                 <div class="lightbox-header">
-                    <button type="button" class="lightbox-back-btn" id="lightbox-back-btn" aria-label="Go Back">
+                    <button type="button" class="lightbox-back-btn" id="lightbox-back-btn" onclick="window.closeReceiptLightbox && window.closeReceiptLightbox()" aria-label="Go Back">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
@@ -215,7 +215,7 @@
                         <h4 id="lightbox-receipt-title">Receipt Details</h4>
                         <span id="lightbox-receipt-date" class="lightbox-date"></span>
                     </div>
-                    <button type="button" class="lightbox-close-btn" id="lightbox-close-btn" aria-label="Close">✕</button>
+                    <button type="button" class="lightbox-close-btn" id="lightbox-close-btn" onclick="window.closeReceiptLightbox && window.closeReceiptLightbox()" aria-label="Close">✕</button>
                 </div>
 
                 <div class="lightbox-body">

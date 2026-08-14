@@ -325,25 +325,49 @@ document.addEventListener('DOMContentLoaded', function () {
     // Close receipt modal lightbox
     function closeReceiptLightbox() {
         const modal = document.getElementById('receipt-lightbox-modal');
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal.style.display = 'none';
+        }
         document.body.style.overflow = '';
         _activeLightboxReceipt = null;
     }
 
-    // Attach lightbox close event listeners
-    document.addEventListener('DOMContentLoaded', () => {
+    // Expose functions globally on window for instant access and onclick handlers
+    window.openReceiptLightbox = openReceiptLightbox;
+    window.closeReceiptLightbox = closeReceiptLightbox;
+
+    // Attach lightbox close event listeners directly
+    function bindLightboxEvents() {
         const backBtn = document.getElementById('lightbox-back-btn');
         const closeBtn = document.getElementById('lightbox-close-btn');
         const backdrop = document.getElementById('lightbox-backdrop');
 
-        if (backBtn) backBtn.addEventListener('click', closeReceiptLightbox);
-        if (closeBtn) closeBtn.addEventListener('click', closeReceiptLightbox);
-        if (backdrop) backdrop.addEventListener('click', closeReceiptLightbox);
+        if (backBtn) {
+            backBtn.onclick = function(e) {
+                if (e) e.stopPropagation();
+                closeReceiptLightbox();
+            };
+        }
+        if (closeBtn) {
+            closeBtn.onclick = function(e) {
+                if (e) e.stopPropagation();
+                closeReceiptLightbox();
+            };
+        }
+        if (backdrop) {
+            backdrop.onclick = function(e) {
+                if (e) e.stopPropagation();
+                closeReceiptLightbox();
+            };
+        }
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeReceiptLightbox();
         });
-    });
+    }
+
+    // Call binding immediately
+    bindLightboxEvents();
 
     // Update the receipt gallery
     function updateReceiptGallery(expenses) {
