@@ -34,6 +34,13 @@ EXCLUDE_PATTERNS = {
     "testing",
     "firebase_b64.txt",
     "hf_upload.py",               # Don't upload this script itself
+    "mobile app",
+    ".expo",
+    "dist",
+    "receipt_dataset",
+    "data",
+    "*.cache",
+    "*.npy",
 }
 
 def should_skip(path: Path) -> bool:
@@ -127,6 +134,14 @@ def main():
                 "run.bat",
                 "start.bat",
                 "start.ps1",
+                "mobile app/**",
+                "**/node_modules/**",
+                "**/.expo/**",
+                "**/dist/**",
+                "**/receipt_dataset/**",
+                "**/data/**",
+                "*.cache",
+                "*.cache.npy",
             ],
             commit_message="deploy: upload via huggingface_hub API (Xet-compatible)",
         )
