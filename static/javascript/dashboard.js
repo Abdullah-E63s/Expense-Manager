@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 try {
                     closeReceiptLightbox();
                     if (typeof window.showLoading === 'function') {
-                        window.showLoading('Processing Receipt...', 'Fetching image for AI YOLO OCR');
+                        window.showLoading('Processing Receipt...', 'Please wait...');
                     }
                     const res = await fetch(receipt.picture_url);
                     if (!res.ok) throw new Error('Could not fetch receipt image for scanning');

@@ -419,7 +419,7 @@
       // Create a lightweight progress overlay (JS-only, no HTML/CSS edits)
       // Check network connectivity for AI scanner
       if (!navigator.onLine) {
-        alert('⚡ AI Receipt Scanning requires an active internet connection to process with YOLO. Please connect to Wi-Fi or mobile data to scan.');
+        alert('⚡ Receipt scanning requires an active internet connection. Please connect to Wi-Fi or mobile data to scan.');
         if (typeof window.showLoading === 'function') window.hideLoading();
         processBtn.disabled = false;
         return;
@@ -429,7 +429,7 @@
       progressOverlay.style.cssText = 'position:fixed; top:20px; right:20px; background:#2a2a2a; color:#fff; padding:10px 14px; border-radius:8px; z-index:10002; box-shadow:0 4px 12px rgba(0,0,0,0.3); font-size:13px;';
       progressOverlay.innerHTML = `
         <div style="display:flex; align-items:center; gap:15px;">
-            <span id="yolo-progress-text">Preparing to process images...</span>
+            <span id="yolo-progress-text">Processing receipt...</span>
             <button id="yolo-cancel-btn" style="background:#f44336; color:white; border:none; padding:4px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Stop</button>
         </div>
       `;

@@ -174,9 +174,9 @@ function resolveTaskMessage(url, options = {}) {
     const method = (options.method || (options.body ? 'POST' : 'GET')).toUpperCase();
     const u = (typeof url === 'string' ? url : (url?.url || '')).toLowerCase();
 
-    // 1. Receipt & AI YOLO OCR
+    // 1. Receipt Processing
     if (u.includes('/api/yolo/detect') || u.includes('/detect')) {
-        return { title: 'Processing Receipt...', sub: 'Running AI YOLO Neural OCR' };
+        return { title: 'Processing Receipt...', sub: 'Please wait...' };
     }
 
     // 2. Profile Picture / Avatar
@@ -420,8 +420,8 @@ function setupActionListeners() {
         
         if (input.id === 'avatar-input') {
             showLoading('Changing Profile Pic...', 'Uploading and updating image');
-        } else if (input.id === 'receipt-file' || input.id === 'receipt-input' || input.name === 'receipt') {
-            showLoading('Processing Receipt...', 'Running AI YOLO Neural OCR');
+        } else if (input.id === 'receipt-file' || input.id === 'receipt-input' || input.id === 'yolo-image-input' || input.name === 'receipt') {
+            showLoading('Processing Receipt...', 'Please wait...');
         }
     }, true);
 }
