@@ -54,7 +54,8 @@ Write-Host ""
 Write-Host "3. [HUGGING FACE] Syncing to HuggingFace Space..." -ForegroundColor Green
 try {
     if (Test-Path "hf_upload.py") {
-        python hf_upload.py
+        $pyCmd = if (Test-Path ".\.venv\Scripts\python.exe") { ".\.venv\Scripts\python.exe" } else { "python" }
+        & $pyCmd -u hf_upload.py
     } else {
         git push hf main
     }
