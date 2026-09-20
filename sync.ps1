@@ -42,7 +42,12 @@ if ($status) {
 # Step 2: Push to GitHub (Vercel auto-deploys from here)
 Write-Host ""
 Write-Host "2. [GITHUB / VERCEL] Pushing to GitHub origin/main..." -ForegroundColor Green
-git push origin main 2>&1
+git push origin main
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "   [Error] GitHub push failed with exit code $LASTEXITCODE" -ForegroundColor Red
+} else {
+    Write-Host "   Pushed to GitHub successfully." -ForegroundColor Gray
+}
 
 # Step 3: Push to Hugging Face Spaces
 Write-Host ""
@@ -51,7 +56,7 @@ try {
     if (Test-Path "hf_upload.py") {
         python hf_upload.py
     } else {
-        git push hf main 2>&1
+        git push hf main
     }
 } catch {
     Write-Host "   [Warning] Hugging Face Space sync skipped: $($_.Exception.Message)" -ForegroundColor Yellow
